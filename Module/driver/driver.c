@@ -10,11 +10,14 @@ Driver_Instance *DriverInit(Driver_Init_Config_s *init_config)
     Driver_Instance *driver = (Driver_Instance *)malloc(sizeof(Driver_Instance));
     memset(driver, 0, sizeof(Driver_Instance));
 
-    driver->mtype = init_config->mtype;
-    driver->deadzone = init_config->deadzone;
-    driver->mline = init_config->mline;
-    driver->mphase = init_config->mphase;
+    init_config->usart_config = (USART_Init_Config_s){
+        .recv_buff_size = USART_RXBUFF_LIMIT,
+        .usart_handle = &huart2,
+        .id = driver,
+        .usart_module_callback = DriverCallback,
+    };
 
+    // 注册usart实例
     driver->usart = USARTRegister(&init_config->usart_config);
 
     for (int i = 0; i < MOTOR_CNT; ++i)
@@ -25,70 +28,82 @@ Driver_Instance *DriverInit(Driver_Init_Config_s *init_config)
     return driver;
 }
 
-/**
- * @brief Callback function to process received motor data.
- *        Parses strings like "$MAll:M1,M2,M3,M4#" or "$MTEP:M1,M2,M3,M4#".
- * @note This function currently only stores the M1 value into the provided
- *       motor_instance. You need to adapt this based on how you manage
- *       data for the four motors.
- * @param Driver_instance The driver instance associated with this callback.
- */
-void DriverCallback(Driver_Instance *driver_instance)
+void DriverCallback(USART_Instance *_usart_instance)
 {
-    if (!driver_instance || !driver_instance->usart)
+    Driver_Instance *driver_instance = (Driver_Instance *)_usart_instance->id;
+    uint8_t *usart_rx_buf = driver_instance->usart->recv_buff;
+    uint16_t rx_len = driver_instance->usart->data_len; // Actual length of received data from ISR
+
+    // Basic validation:
+    // 1. Data must exist (rx_len > 0).
+    // 2. Actual received length (rx_len) must not exceed the capacity of the DMA buffer (USART_RXBUFF_LIMIT).
+    //    If rx_len > USART_RXBUFF_LIMIT, it indicates a critical error (e.g., DMA misconfiguration or overflow).
+    // 3. Message must end with '#' character.
+    if (rx_len < 17 || rx_len > USART_RXBUFF_LIMIT || usart_rx_buf[0] != '$' || usart_rx_buf[rx_len - 3] != '#')
     {
-        return; // Safety check
+        // Optionally, log an error or handle specific cases like rx_len > USART_RXBUFF_LIMIT.
+        // Clearing driver_instance->usart->data_len might be done by the caller or USART service.
+        return;
     }
 
-    uint8_t *rx_buf = driver_instance->usart->recv_buff;
-    uint8_t rx_len = driver_instance->usart->recv_buff_size;
+    // Use a Variable Length Array (VLA) for the temporary buffer.
+    // Sized by actual received length (rx_len) + 1 for the null terminator.
+    // This requires C99 or a compiler extension (e.g., GCC).
+    // USART_RXBUFF_LIMIT still acts as an upper bound for rx_len due to the check above.
+    char temp_buf[rx_len + 1];
 
-    // Ensure buffer is null-terminated for string functions
-    // Make sure USART_RXBUFF_LIMIT is large enough to accommodate the null terminator
-    if (rx_len < USART_RXBUFF_LIMIT)
-    {
-        rx_buf[rx_len] = '\0';
-    }
-    else
-    {
-        rx_buf[USART_RXBUFF_LIMIT - 1] = '\0'; // Null-terminate at the end if full
-    }
+    // Copy the received data into the temporary buffer.
+    memcpy(temp_buf, usart_rx_buf, rx_len);
+    // Null-terminate the string in the temporary buffer for safe string operations.
+    temp_buf[rx_len] = '\0';
 
     int m1, m2, m3, m4;
 
-    // Check for Total Encoder Data: "$MAll:M1,M2,M3,M4#"
-    if (strncmp((char *)rx_buf, "$MAll:", 6) == 0)
+    // Process $MAll: type messages
+    // Example: $MAll:0,0,1,0#
+    if (strncmp(temp_buf, "$MAll:", 6) == 0)
     {
-        int parsed_count = sscanf((char *)rx_buf, "$MAll:%d,%d,%d,%d#", &m1, &m2, &m3, &m4);
+        int parsed_count = sscanf(temp_buf, "$MAll:%d,%d,%d,%d#", &m1, &m2, &m3, &m4);
         if (parsed_count == 4)
         {
-            // Successfully parsed 4 values
-            driver_instance->motor[0]->measure.total_ecd = (uint32_t)m1;
-            driver_instance->motor[1]->measure.total_ecd = (uint32_t)m2;
-            driver_instance->motor[2]->measure.total_ecd = (uint32_t)m3;
-            driver_instance->motor[3]->measure.total_ecd = (uint32_t)m4;
+            // MOTOR_CNT should be defined (e.g., in driver.h or a configuration file)
+            // Ensure we don't write out of bounds for the motor array.
+            if (MOTOR_CNT >= 4)
+            {
+                driver_instance->motor[0]->measure.total_ecd = m1;
+                driver_instance->motor[1]->measure.total_ecd = m2;
+                driver_instance->motor[2]->measure.total_ecd = m3;
+                driver_instance->motor[3]->measure.total_ecd = m4;
+            }
+            // Message processed. The main USART buffer (usart_rx_buf) is typically cleared
+            // by the USART service (e.g., in HAL_UARTEx_RxEventCallback after this callback returns).
+            return; // Successfully processed $MAll:
         }
     }
-    // Check for Real-time Encoder Data: "$MTEP:M1,M2,M3,M4#"
-    else if (strncmp((char *)rx_buf, "$MTEP:", 6) == 0)
+    // Process $MTEP: type messages (retained from previous logic)
+    // Example: $MTEP:123,456,789,101#
+    else if (strncmp(temp_buf, "$MTEP:", 6) == 0)
     {
-        int parsed_count = sscanf((char *)rx_buf, "$MTEP:%d,%d,%d,%d#", &m1, &m2, &m3, &m4);
+        int parsed_count = sscanf(temp_buf, "$MTEP:%d,%d,%d,%d#", &m1, &m2, &m3, &m4);
         if (parsed_count == 4)
         {
-            // Successfully parsed 4 values
-            driver_instance->motor[0]->measure.last_ecd = driver_instance->motor[0]->measure.ecd;
-            driver_instance->motor[1]->measure.last_ecd = driver_instance->motor[1]->measure.ecd;
-            driver_instance->motor[2]->measure.last_ecd = driver_instance->motor[2]->measure.ecd;
-            driver_instance->motor[3]->measure.last_ecd = driver_instance->motor[3]->measure.ecd;
+            if (MOTOR_CNT >= 4)
+            {
+                driver_instance->motor[0]->measure.last_ecd = driver_instance->motor[0]->measure.ecd;
+                driver_instance->motor[1]->measure.last_ecd = driver_instance->motor[1]->measure.ecd;
+                driver_instance->motor[2]->measure.last_ecd = driver_instance->motor[2]->measure.ecd;
+                driver_instance->motor[3]->measure.last_ecd = driver_instance->motor[3]->measure.ecd;
 
-            driver_instance->motor[0]->measure.ecd = (uint16_t)m1;
-            driver_instance->motor[1]->measure.ecd = (uint16_t)m2;
-            driver_instance->motor[2]->measure.ecd = (uint16_t)m3;
-            driver_instance->motor[3]->measure.ecd = (uint16_t)m4;
+                driver_instance->motor[0]->measure.ecd = m1;
+                driver_instance->motor[1]->measure.ecd = m2;
+                driver_instance->motor[2]->measure.ecd = m3;
+                driver_instance->motor[3]->measure.ecd = m4;
+            }
+            return; // Successfully processed $MTEP:
         }
     }
 
-    // Optional: Clear buffer or reset size if needed after processing
-    memset(driver_instance->usart->recv_buff, 0, driver_instance->usart->recv_buff_size);
-    driver_instance->usart->recv_buff_size = 0;
+    // If the message was not recognized or parsing failed for a recognized type,
+    // it will fall through. The USART buffer will be cleared by the calling service.
+    // No explicit action needed here unless specific error handling for malformed known types is required.
 }

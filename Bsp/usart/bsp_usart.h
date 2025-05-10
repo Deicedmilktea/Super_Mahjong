@@ -7,7 +7,10 @@
 #define USART_DEVICE_MAX_NUM 3  // 支持的最大USART设备数量
 #define USART_RXBUFF_LIMIT 255u // 如果协议需要更大的buff,请修改这里
 
-// 模块回调函数,用于解析协议
+// Forward declaration of USART_Instance
+typedef struct USART_Instance USART_Instance;
+
+// 模块回调函数,用于解析协议,返回1表示数据处理完成可以清空buffer,返回0表示数据未处理完需要保留
 typedef void (*usart_module_callback)();
 
 /* 发送模式枚举 */
@@ -21,20 +24,23 @@ typedef enum
 
 // 串口实例结构体,每个module都要包含一个实例.
 // 由于串口是独占的点对点通信,所以不需要考虑多个module同时使用一个串口的情况,因此不用加入id;当然也可以选择加入,这样在bsp层可以访问到module的其他信息
-typedef struct
+struct USART_Instance
 {
-    uint8_t recv_buff[USART_RXBUFF_LIMIT]; // 预先定义的最大buff大小,如果太小请修改USART_RXBUFF_LIMIT
-    uint8_t recv_buff_size;                // 模块接收一包数据的大小
-    UART_HandleTypeDef *usart_handle;      // 实例对应的usart_handle
-    usart_module_callback module_callback; // 解析收到的数据的回调函数
-} USART_Instance;
+    uint8_t recv_buff[USART_RXBUFF_LIMIT];           // 预先定义的最大buff大小,如果太小请修改USART_RXBUFF_LIMIT
+    uint8_t recv_buff_size;                          // buffer大小
+    uint16_t data_len;                               // 当前接收到的数据长度
+    UART_HandleTypeDef *usart_handle;                // 实例对应的usart_handle
+    void (*usart_module_callback)(USART_Instance *); // 解析收到的数据的回调函数
+    void *id;                                        // 实例的唯一标识符,可以是模块的id或其他信息,如果不需要可以设置为NULL
+};
 
 // 串口初始化配置结构体
 typedef struct
 {
-    uint8_t recv_buff_size;                // 模块接收一包数据的大小
-    UART_HandleTypeDef *usart_handle;      // 实例对应的usart_handle
-    usart_module_callback module_callback; // 解析收到的数据的回调函数
+    uint8_t recv_buff_size;                          // 模块接收一包数据的大小
+    UART_HandleTypeDef *usart_handle;                // 实例对应的usart_handle
+    void (*usart_module_callback)(USART_Instance *); // 解析收到的数据的回调函数
+    void *id;                                        // 实例的唯一标识符,可以是模块的id或其他信息,如果不需要可以设置为NULL
 } USART_Init_Config_s;
 
 /**

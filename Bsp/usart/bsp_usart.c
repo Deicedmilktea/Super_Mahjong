@@ -3,7 +3,7 @@
 #include "string.h"
 
 /* usart服务实例,所有注册了usart的模块信息会被保存在这里 */
-static uint8_t idx;
+static uint8_t idx = 0;
 static USART_Instance *usart_instances[USART_DEVICE_MAX_NUM] = {NULL};
 
 /**
@@ -35,7 +35,8 @@ USART_Instance *USARTRegister(USART_Init_Config_s *init_config)
 
     usart->usart_handle = init_config->usart_handle;
     usart->recv_buff_size = init_config->recv_buff_size;
-    usart->module_callback = init_config->module_callback;
+    usart->usart_module_callback = init_config->usart_module_callback;
+    usart->id = init_config->id;
 
     usart_instances[idx++] = usart;
     USARTServiceInit(usart);
@@ -83,30 +84,33 @@ uint8_t USARTIsReady(USART_Instance *_instance)
 }
 
 /**
- * @brief 每次dma/idle中断发生时，都会调用此函数.对于每个uart实例会调用对应的回调进行进一步的处理
- *        例如:视觉协议解析/遥控器解析/裁判系统解析
+ * @brief 每次DMA/IDLE中断发生时会调用此函数，处理收到的数据
  *
- * @note  通过__HAL_DMA_DISABLE_IT(huart->hdmarx,DMA_IT_HT)关闭dma half transfer中断防止两次进入HAL_UARTEx_RxEventCallback()
- *        这是HAL库的一个设计失误,发生DMA传输完成/半完成以及串口IDLE中断都会触发HAL_UARTEx_RxEventCallback()
- *        我们只希望处理，因此直接关闭DMA半传输中断第一种和第三种情况
+ * @note 通过__HAL_DMA_DISABLE_IT关闭DMA半传输中断，只处理完整DMA传输和IDLE中断
  *
  * @param huart 发生中断的串口
- * @param Size 此次接收到的总数居量,暂时没用
+ * @param Size 此次接收到的数据长度
  */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     for (uint8_t i = 0; i < idx; ++i)
-    { // find the instance which is being handled
+    {
         if (huart == usart_instances[i]->usart_handle)
-        { // call the callback function if it is not NULL
-            if (usart_instances[i]->module_callback != NULL)
+        {
+            // 更新接收到的数据长度
+            usart_instances[i]->data_len = Size;
+
+            // 调用回调函数处理数据
+            if (usart_instances[i]->usart_module_callback != NULL)
             {
-                usart_instances[i]->module_callback();
+                usart_instances[i]->usart_module_callback(usart_instances[i]);
                 memset(usart_instances[i]->recv_buff, 0, Size); // 接收结束后清空buffer,对于变长数据是必要的
             }
+
+            // 重启DMA接收
             HAL_UARTEx_ReceiveToIdle_DMA(usart_instances[i]->usart_handle, usart_instances[i]->recv_buff, usart_instances[i]->recv_buff_size);
             __HAL_DMA_DISABLE_IT(usart_instances[i]->usart_handle->hdmarx, DMA_IT_HT);
-            return; // break the loop
+            return;
         }
     }
 }
