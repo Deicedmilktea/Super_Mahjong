@@ -60,10 +60,15 @@ void Error_Handler(void);
 #define KEY_2_Pin GPIO_PIN_2
 #define KEY_2_GPIO_Port GPIOE
 #define KEY_2_EXTI_IRQn EXTI2_IRQn
+#define KEY_1_Pin GPIO_PIN_3
+#define KEY_1_GPIO_Port GPIOE
+#define KEY_1_EXTI_IRQn EXTI3_IRQn
 #define ELEVA_RED_1_Pin GPIO_PIN_11
 #define ELEVA_RED_1_GPIO_Port GPIOF
+#define ELEVA_RED_1_EXTI_IRQn EXTI15_10_IRQn
 #define ELEVA_RED_2_Pin GPIO_PIN_12
 #define ELEVA_RED_2_GPIO_Port GPIOF
+#define ELEVA_RED_2_EXTI_IRQn EXTI15_10_IRQn
 
 /* USER CODE BEGIN Private defines */
 
