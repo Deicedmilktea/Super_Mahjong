@@ -25,6 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "bsp_dwt.h"
 #include "mahjong.h"
 /* USER CODE END Includes */
 
@@ -94,6 +95,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+  DWT_Init(168);
   mahjong_init();
   /* USER CODE END 2 */
 
