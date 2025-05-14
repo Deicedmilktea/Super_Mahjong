@@ -7,8 +7,8 @@
     "Drivers",
     "Middlewares",
     "Application",
-    "Module",
-    "Bsp"
+    "Bsp",
+    "Module"
   ],
   "virtualFolder": {
     "name": "<virtual_root>",
@@ -76,11 +76,18 @@
           "Drivers/STM32F4xx_HAL_Driver/Inc",
           "Drivers/STM32F4xx_HAL_Driver/Inc/Legacy",
           "Middlewares/Third_Party/FreeRTOS/Source/include",
-          "Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
+          "Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS",
           "Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F",
           "Drivers/CMSIS/Device/ST/STM32F4xx/Include",
           "Drivers/CMSIS/Include",
-          "Middlewares/ST/ARM/DSP/Inc"
+          "Middlewares/ST/ARM/DSP/Inc",
+          "Application/mahjong",
+          "Bsp/usart",
+          "Module/driver",
+          "Module/algorithm",
+          "Bsp/dwt",
+          "Bsp/gpio",
+          "Application"
         ],
         "libList": [
           "Middlewares/ST/ARM/DSP/Lib"

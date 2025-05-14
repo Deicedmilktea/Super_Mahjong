@@ -126,6 +126,7 @@ typedef struct
 /* 电机反馈信息*/
 typedef struct
 {
+    int16_t init_ecd;         // 编码器初始值
     uint16_t last_ecd;        // 上一次读取的编码器值
     int16_t ecd;              // 0-8191,刻度总共有8192格 (modified to support negative values)
     float angle_single_round; // 单圈角度
@@ -154,8 +155,10 @@ typedef struct
  */
 typedef struct
 {
+    uint8_t mahjong_phase;
     Motor_Instance *motor[MOTOR_CNT]; // 电机实例数组,最多4个电机
     USART_Instance *usart;            // 电机实例对应的串口实例
+    Motor_Working_Type_e stop_flag;   // 启停标志
 } Driver_Instance;
 
 /***

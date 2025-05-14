@@ -2,6 +2,9 @@
 #include <string.h> // Added for string functions
 #include <stdio.h>  // Added for sscanf
 
+static uint8_t idx = 0;
+static Driver_Instance *driver_instances[DRIVER_MAX_NUM] = {NULL}; // 驱动板实例数组,最多1个驱动板
+
 /**
  * @brief register motor instance
  */
@@ -45,6 +48,8 @@ Driver_Instance *DriverInit(Driver_Init_Config_s *init_config)
         driver->motor[i] = init_config->motor[i];
     }
 
+    driver_instances[idx++] = driver; // 将驱动板实例添加到数组中
+
     return driver;
 }
 
@@ -79,6 +84,17 @@ void DriverCallback(USART_Instance *_usart_instance)
             driver_instance->motor[1]->measure.total_ecd = m2;
             driver_instance->motor[2]->measure.total_ecd = m3;
             driver_instance->motor[3]->measure.total_ecd = m4;
+
+            // use for reset
+            if (driver_instance->mahjong_phase)
+            {
+                driver_instance->motor[0]->measure.init_ecd = m1;
+                driver_instance->motor[1]->measure.init_ecd = m2;
+                driver_instance->motor[2]->measure.init_ecd = m3;
+                driver_instance->motor[3]->measure.init_ecd = m4;
+                driver_instance->mahjong_phase = 0;
+            }
+
             return;
         }
     }
@@ -189,7 +205,15 @@ void MotorControl(Driver_Instance *driver)
 
     // 发送电机控制数据
     // 发送数据格式: $pwm:0,0,0,0#
-    char send_buf[64];
-    snprintf(send_buf, sizeof(send_buf), "$pwm:%d,%d,%d,%d#", set[0], set[1], set[2], set[3]);
-    USARTSend(driver->usart, (uint8_t *)send_buf, strlen(send_buf), USART_TRANSFER_BLOCKING);
+    if (driver->stop_flag == MOTOR_STOP)
+    {
+        char *pwm_cmd = "$pwm:0,0,0,0#";
+        USARTSend(driver->usart, pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
+    }
+    else
+    {
+        char send_buf[64];
+        snprintf(send_buf, sizeof(send_buf), "$pwm:%d,%d,%d,%d#", set[0], set[1], set[2], set[3]);
+        USARTSend(driver->usart, (uint8_t *)send_buf, strlen(send_buf), USART_TRANSFER_BLOCKING);
+    }
 }

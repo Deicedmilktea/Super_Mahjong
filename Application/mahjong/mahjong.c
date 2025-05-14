@@ -5,10 +5,12 @@
 
 static Driver_Instance *driver;                                                  // 驱动板实例
 static Motor_Instance *motor_push_1, *motor_push_2, *motor_elevator, *motor_lid; // 电机实例
-static GPIOInstance *gpio_key, *gpio_red_1, *gpio_red_2;                         // GPIO实例
-static int16_t key_num, red1_num, red2_num = 0;                                  // 按键次数
+static GPIOInstance *gpio_key1, *gpio_key2, *gpio_red_1, *gpio_red_2;            // GPIO实例
+static int16_t key1_num, key2_num, red1_num, red2_num = 0;                       // 按键次数
+static uint8_t phase = 1;                                                        // 轮数
 
-static void KeyCallback(GPIOInstance *gpio);
+static void Key1Callback(GPIOInstance *gpio);
+static void Key2Callback(GPIOInstance *gpio);
 static void Red1Callback(GPIOInstance *gpio);
 static void Red2Callback(GPIOInstance *gpio);
 
@@ -20,11 +22,11 @@ void mahjong_init()
     Motor_Init_Config_s motor_config = {
         .controller_param_init_config = {
             .angle_PID = {
-                .Kp = 0.3,  // 0.2
-                .Ki = 0,    // 0
-                .Kd = 0.02, // 0.015
+                .Kp = 1,     // 0.2 0.3
+                .Ki = 0,     // 0
+                .Kd = 0.015, // 0.015
                 .Improve = PID_Integral_Limit | PID_Derivative_On_Measurement,
-                .MaxOut = 1000,
+                .MaxOut = 2000,
                 .DeadBand = 10,
                 .IntegralLimit = 500,
             },
@@ -55,11 +57,15 @@ void mahjong_init()
     // 按键初始化
     GPIO_Init_Config_s gpio_init = {
         .exti_mode = GPIO_EXTI_MODE_FALLING, // 注意和CUBEMX的配置一致
-        .GPIO_Pin = GPIO_PIN_3,              // GPIO引脚
+        .GPIO_Pin = GPIO_PIN_2,              // GPIO引脚
         .GPIOx = GPIOE,                      // GPIO外设
-        .gpio_model_callback = KeyCallback,  // EXTI回调函数
+        .gpio_model_callback = Key1Callback, // EXTI回调函数
     };
-    gpio_key = GPIORegister(&gpio_init); // 注册GPIO实例
+    gpio_key1 = GPIORegister(&gpio_init); // 注册GPIO实例
+
+    gpio_init.GPIO_Pin = GPIO_PIN_3;              // GPIO引脚
+    gpio_init.gpio_model_callback = Key2Callback; // EXTI回调函数
+    gpio_key2 = GPIORegister(&gpio_init);         // 注册GPIO实例
 
     // 红外1 gpio初始化
     gpio_init.GPIO_Pin = GPIO_PIN_11;             // GPIO引脚
@@ -103,28 +109,44 @@ void mahjong_task()
     {
     }
 
+    if (phase)
+    {
+        driver->mahjong_phase = 1;
+        phase = 0;
+    }
+
+    if (key2_num % 2 == 1)
+        driver->stop_flag = MOTOR_STOP;
+    else
+        driver->stop_flag = MOTOR_ENABLED;
+
     MotorControl(driver);
 }
 
-static void KeyCallback(GPIOInstance *gpio)
+static void Key1Callback(GPIOInstance *gpio)
 {
-    key_num++;
+    key1_num++;
 
-    // if (key_num % 2 == 1)
-    // {
-    //     MotorSetRef(motor_push_1, motor_push_1->measure.total_ecd + 1000);
-    //     MotorSetRef(motor_push_2, motor_push_2->measure.total_ecd + 1000);
-    //     MotorSetRef(motor_elevator, motor_elevator->measure.total_ecd + 1000);
-    //     MotorSetRef(motor_lid, motor_lid->measure.total_ecd + 1000);
-    // }
+    if (key1_num % 2 == 1)
+    {
+        MotorSetRef(motor_push_1, motor_push_1->measure.init_ecd + 1000); // 推牌参数1000
+        MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd + 1000);
+        MotorSetRef(motor_elevator, motor_elevator->measure.init_ecd + 1000);
+        MotorSetRef(motor_lid, motor_lid->measure.init_ecd + 1000);
+    }
 
-    // else
-    // {
-    //     MotorSetRef(motor_push_1, motor_push_1->measure.total_ecd - 1000);
-    //     MotorSetRef(motor_push_2, motor_push_2->measure.total_ecd - 1000);
-    //     MotorSetRef(motor_elevator, motor_elevator->measure.total_ecd - 1000);
-    //     MotorSetRef(motor_lid, motor_lid->measure.total_ecd - 1000);
-    // }
+    else
+    {
+        MotorSetRef(motor_push_1, motor_push_1->measure.init_ecd);
+        MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd);
+        MotorSetRef(motor_elevator, motor_elevator->measure.init_ecd);
+        MotorSetRef(motor_lid, motor_lid->measure.init_ecd);
+    }
+}
+
+static void Key2Callback(GPIOInstance *gpio)
+{
+    key2_num++;
 }
 
 static void Red1Callback(GPIOInstance *gpio)
