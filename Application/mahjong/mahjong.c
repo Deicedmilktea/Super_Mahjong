@@ -3,16 +3,29 @@
 #include "string.h"
 #include "bsp_gpio.h"
 
-static Driver_Instance *driver;                                                  // 驱动板实例
-static Motor_Instance *motor_push_1, *motor_push_2, *motor_elevator, *motor_lid; // 电机实例
-static GPIOInstance *gpio_key1, *gpio_key2, *gpio_red_1, *gpio_red_2;            // GPIO实例
-static int16_t key1_num, key2_num, red1_num, red2_num = 0;                       // 按键次数
-static uint8_t phase = 1;                                                        // 轮数
+static Driver_Instance *driver;                                                                                    // 驱动板实例
+static Motor_Instance *motor_push_1, *motor_push_2, *motor_elevator, *motor_lid;                                   // 电机实例
+static Motor_Instance *motor_turntable, *motor_conveyor_1, *motor_conveyor_2;                                      // 电机实例
+static GPIOInstance *gpio_key1, *gpio_key2, *gpio_red_1, *gpio_red_2;                                              // GPIO实例
+static int16_t key1_count, key2_count, ir_left_count, last_ir_left_count, ir_right_count, last_ir_right_count = 0; // 按键次数
+static uint8_t phase = 1;                                                                                          // 轮数
+static uint8_t dealRounds = 0;                                                                                     // 发牌轮数
+
+static GlobalPhase global_phase = PHASE_IDLE;
+static DealingSubState dealing_sub_state = DEAL_INIT;
+static JumpingSubState jumping_sub_state = JUMP_INIT;
+static SingleRefillSubState single_refill_sub_state = REFILL_INIT;
 
 static void Key1Callback(GPIOInstance *gpio);
 static void Key2Callback(GPIOInstance *gpio);
 static void Red1Callback(GPIOInstance *gpio);
 static void Red2Callback(GPIOInstance *gpio);
+
+static void phase_idle_task();
+static void phase_dealing_task();
+static void phase_jumping_task();
+static void phase_single_refill_task();
+static void phase_error_task();
 
 /***
  * @brief initialize mahjong_task
@@ -51,7 +64,6 @@ void mahjong_init()
             motor_lid,
         },
     };
-
     driver = DriverInit(&init_config);
 
     // 按键初始化
@@ -95,14 +107,37 @@ void mahjong_init()
 
 void mahjong_task()
 {
-    //"$pwm:0,0,0,0#" 控制电机转动,速度的范围为(-3600~3600)
-    // const char *pwm_cmd = "$pwm:100,0,0,0#";
-    // USARTSend(driver->usart, (uint8_t *)pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
+    // 确定所属阶段
+    switch (global_phase)
+    {
+    case PHASE_IDLE:
+        phase_idle_task();
+        break;
 
-    if (red1_num < 24 && red2_num < 24)
+    case PHASE_DEALING:
+        phase_dealing_task();
+        break;
+
+    case PHASE_JUMPING:
+        phase_jumping_task();
+        break;
+
+    case PHASE_SINGLE_REFILL:
+        phase_single_refill_task();
+        break;
+
+    case PHASE_ERROR:
+        phase_error_task();
+        break;
+
+    default:
+        break;
+    }
+
+    if (ir_left_count < 24 && ir_right_count < 24)
     {
     }
-    else if (red1_num == 24 && red2_num == 24)
+    else if (ir_left_count == 24 && ir_right_count == 24)
     {
     }
     else
@@ -115,7 +150,7 @@ void mahjong_task()
         phase = 0;
     }
 
-    if (key2_num % 2 == 1)
+    if (key2_count % 2 == 1)
         driver->stop_flag = MOTOR_STOP;
     else
         driver->stop_flag = MOTOR_ENABLED;
@@ -125,9 +160,9 @@ void mahjong_task()
 
 static void Key1Callback(GPIOInstance *gpio)
 {
-    key1_num++;
+    key1_count++;
 
-    if (key1_num % 2 == 1)
+    if (key1_count % 2 == 1)
     {
         MotorSetRef(motor_push_1, motor_push_1->measure.init_ecd + 1000); // 推牌参数1000
         MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd + 1000);
@@ -146,15 +181,156 @@ static void Key1Callback(GPIOInstance *gpio)
 
 static void Key2Callback(GPIOInstance *gpio)
 {
-    key2_num++;
+    key2_count++;
 }
 
 static void Red1Callback(GPIOInstance *gpio)
 {
-    red1_num++;
+    ir_left_count++;
 }
 
 static void Red2Callback(GPIOInstance *gpio)
 {
-    red2_num++;
+    ir_right_count++;
+}
+
+/**
+ * @brief 空闲状态任务
+ */
+static void phase_idle_task()
+{
+    // 1. 检测到开始按键按下
+
+    // 2. 进入发牌阶段
+    global_phase = PHASE_DEALING;
+}
+
+/**
+ * @brief 发牌阶段任务
+ */
+static void phase_dealing_task()
+{
+    switch (dealing_sub_state)
+    {
+    case DEAL_INIT: // 初始化发牌阶段
+        dealing_sub_state = DEAL_TRAY_DOWN_B1_START;
+        break;
+
+    case DEAL_TRAY_DOWN_B1_START: // 托盘下降启动
+        MOTOR_ELEVATOR_B1;
+        dealing_sub_state = DEAL_TRAY_DOWN_B1_WAIT_COMPLETE;
+        break;
+
+    case DEAL_TRAY_DOWN_B1_WAIT_COMPLETE: // 等待托盘下降完成
+        if (abs(driver->motor[1]->motor_controller.pid_ref - driver->motor[1]->measure.total_ecd) < 50)
+            dealing_sub_state = DEAL_LAYER1_CONV_START;
+        break;
+
+    case DEAL_LAYER1_CONV_START: // 启动传送带上第一层麻将
+        MOTOR_CONVEYOR_1_START;
+        MOTOR_CONVEYOR_2_START;
+        MOTOR_TURNTABLE_START;
+        dealing_sub_state = DEAL_LAYER1_CONV_WAIT_TILE;
+        break;
+
+    case DEAL_LAYER1_CONV_WAIT_TILE: // 等待传送带的牌到达
+        if (ir_left_count > last_ir_left_count)
+            MOTOR_CONVEYOR_1_STOP;
+        if (ir_right_count > last_ir_right_count)
+            MOTOR_CONVEYOR_2_STOP;
+        if (ir_left_count > last_ir_left_count && ir_right_count > last_ir_right_count)
+        {
+            // MOTOR_TURNTABLE_STOP;
+            last_ir_left_count = ir_left_count;   // 更新红外计数
+            last_ir_right_count = ir_right_count; // 更新红外计数
+            dealing_sub_state = DEAL_TRAY_DOWN_B2_START;
+        }
+        break;
+
+    case DEAL_TRAY_DOWN_B2_START: // 托盘下降启动
+        MOTOR_ELEVATOR_B2;
+        dealing_sub_state = DEAL_TRAY_DOWN_B2_WAIT_COMPLETE;
+        break;
+
+    case DEAL_TRAY_DOWN_B2_WAIT_COMPLETE: // 等待托盘下降完成
+        if (abs(driver->motor[2]->motor_controller.pid_ref - driver->motor[2]->measure.total_ecd) < 50)
+            dealing_sub_state = DEAL_LAYER2_CONV_START;
+        break;
+
+    case DEAL_LAYER2_CONV_START: // 启动传送带上第二层麻将
+        MOTOR_CONVEYOR_1_START;
+        MOTOR_CONVEYOR_2_START;
+        MOTOR_TURNTABLE_START;
+        dealing_sub_state = DEAL_LAYER2_CONV_WAIT_TILE;
+        break;
+
+    case DEAL_LAYER2_CONV_WAIT_TILE: // 等待传送带的牌到达
+        if (ir_left_count > last_ir_left_count)
+            MOTOR_CONVEYOR_1_STOP;
+        if (ir_right_count > last_ir_right_count)
+            MOTOR_CONVEYOR_2_STOP;
+        if (ir_left_count > last_ir_left_count && ir_right_count > last_ir_right_count)
+        {
+            // MOTOR_TURNTABLE_STOP;
+            last_ir_left_count = ir_left_count;   // 更新红外计数
+            last_ir_right_count = ir_right_count; // 更新红外计数
+            dealing_sub_state = DEAL_TRAY_UP_START;
+        }
+        break;
+
+    case DEAL_TRAY_UP_START: // 托盘上升启动
+        MOTOR_ELEVATOR_BG;
+        dealing_sub_state = DEAL_TRAY_UP_WAIT_COMPLETE;
+        break;
+
+    case DEAL_TRAY_UP_WAIT_COMPLETE: // 等待托盘上升完成
+        if (abs(driver->motor[2]->motor_controller.pid_ref - driver->motor[2]->measure.total_ecd) < 50)
+            dealing_sub_state = DEAL_WAIT_TILE_CAUGHT;
+        break;
+
+    case DEAL_WAIT_TILE_CAUGHT: // 等待牌被接走
+        if (ir_left_count > last_ir_left_count && ir_right_count > last_ir_right_count)
+        {
+            dealRounds++;
+            if (dealRounds >= 12)
+            {
+                global_phase = PHASE_JUMPING;
+                dealRounds = 0; // 重置发牌轮数
+            }
+
+            dealing_sub_state = DEAL_INIT; // 重置发牌状态机
+            ir_left_count = 0;             // 重置红外计数
+            ir_right_count = 0;            // 重置红外计数
+            last_ir_left_count = 0;        // 重置红外计数
+            last_ir_right_count = 0;       // 重置红外计数
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    driver->stop_flag = MOTOR_ENABLED;
+}
+
+/**
+ * @brief 跳牌阶段任务
+ */
+static void phase_jumping_task()
+{
+}
+
+/**
+ * @brief 单张摸牌并补牌阶段任务
+ */
+static void phase_single_refill_task()
+{
+}
+
+/**
+ * @brief 错误状态任务
+ */
+static void phase_error_task()
+{
+    driver->stop_flag = MOTOR_STOP;
 }
