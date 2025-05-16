@@ -9,7 +9,7 @@ static Motor_Instance *motor_turntable, *motor_conveyor_1, *motor_conveyor_2;   
 static GPIOInstance *gpio_key1, *gpio_key2, *gpio_red_1, *gpio_red_2;                                              // GPIO实例
 static int16_t key1_count, key2_count, ir_left_count, last_ir_left_count, ir_right_count, last_ir_right_count = 0; // 按键次数
 static uint8_t phase = 1;                                                                                          // 轮数
-static uint8_t dealRounds = 0;                                                                                     // 发牌轮数
+static uint8_t dealStep, jumpStep = 0;                                                                             // 发牌和跳步
 
 static GlobalPhase global_phase = PHASE_IDLE;
 static DealingSubState dealing_sub_state = DEAL_INIT;
@@ -132,16 +132,6 @@ void mahjong_task()
 
     default:
         break;
-    }
-
-    if (ir_left_count < 24 && ir_right_count < 24)
-    {
-    }
-    else if (ir_left_count == 24 && ir_right_count == 24)
-    {
-    }
-    else
-    {
     }
 
     if (phase)
@@ -291,11 +281,11 @@ static void phase_dealing_task()
     case DEAL_WAIT_TILE_CAUGHT: // 等待牌被接走
         if (ir_left_count > last_ir_left_count && ir_right_count > last_ir_right_count)
         {
-            dealRounds++;
-            if (dealRounds >= 12)
+            dealStep++;
+            if (dealStep >= 12)
             {
                 global_phase = PHASE_JUMPING;
-                dealRounds = 0; // 重置发牌轮数
+                dealStep = 0; // 重置发牌轮数
             }
 
             dealing_sub_state = DEAL_INIT; // 重置发牌状态机
@@ -318,6 +308,94 @@ static void phase_dealing_task()
  */
 static void phase_jumping_task()
 {
+    switch (jumping_sub_state)
+    {
+    case JUMP_INIT:
+        jumping_sub_state = JUMP_TRAY_DOWN_B1_START;
+        break;
+
+    case JUMP_TRAY_DOWN_B1_START:
+        MOTOR_ELEVATOR_B1;
+        jumping_sub_state = JUMP_TRAY_DOWN_B1_WAIT_COMPLETE;
+        break;
+
+    case JUMP_TRAY_DOWN_B1_WAIT_COMPLETE:
+        if (abs(driver->motor[2]->motor_controller.pid_ref - driver->motor[2]->measure.total_ecd) < 50)
+            jumping_sub_state = JUMP_CONV_START;
+        break;
+
+    case JUMP_CONV_START:
+        jumpStep++;
+        if (jumpStep == 1)
+        {
+
+            MOTOR_CONVEYOR_1_START;
+            MOTOR_CONVEYOR_2_START;
+        }
+        else
+        {
+            MOTOR_CONVEYOR_1_START;
+            MOTOR_CONVEYOR_2_STOP;
+        }
+        MOTOR_TURNTABLE_START;
+        jumping_sub_state = JUMP_CONV_WAIT_TILE;
+        break;
+
+    case JUMP_CONV_WAIT_TILE:
+        if (jumpStep == 1)
+        {
+            if (ir_left_count > last_ir_left_count)
+                MOTOR_CONVEYOR_1_STOP;
+            if (ir_right_count > last_ir_right_count)
+                MOTOR_CONVEYOR_2_STOP;
+
+            if (ir_left_count > last_ir_left_count && ir_right_count > last_ir_right_count)
+            {
+                MOTOR_TURNTABLE_STOP;
+                last_ir_left_count = ir_left_count;   // 更新红外计数
+                last_ir_right_count = ir_right_count; // 更新红外计数
+                jumping_sub_state = JUMP_TRAY_UP_START;
+            }
+        }
+        else
+        {
+            if (ir_left_count > last_ir_left_count)
+            {
+                MOTOR_CONVEYOR_1_STOP;
+                last_ir_left_count = ir_left_count; // 更新红外计数
+                jumping_sub_state = JUMP_TRAY_UP_START;
+            }
+        }
+
+    case JUMP_TRAY_UP_START:
+        MOTOR_ELEVATOR_BG;
+        jumping_sub_state = JUMP_TRAY_UP_WAIT_COMPLETE;
+        break;
+
+    case JUMP_TRAY_UP_WAIT_COMPLETE:
+        if (abs(driver->motor[2]->motor_controller.pid_ref - driver->motor[2]->measure.total_ecd) < 50)
+            jumping_sub_state = JUMP_WAIT_TILE_CAUGHT;
+
+    case JUMP_WAIT_TILE_CAUGHT:
+        if (ir_left_count > last_ir_left_count && ir_right_count > last_ir_right_count)
+        {
+            jumpStep++;
+            if (jumpStep >= 4)
+            {
+                global_phase = PHASE_SINGLE_REFILL;
+                jumpStep = 0; // 重置跳牌步数
+            }
+
+            jumping_sub_state = JUMP_INIT; // 重置跳牌状态机
+            ir_left_count = 0;             // 重置红外计数
+            ir_right_count = 0;            // 重置红外计数
+            last_ir_left_count = 0;        // 重置红外计数
+            last_ir_right_count = 0;       // 重置红外计数
+        }
+
+    default:
+        break;
+    }
 }
 
 /**

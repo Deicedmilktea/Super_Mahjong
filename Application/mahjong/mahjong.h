@@ -45,15 +45,17 @@ typedef enum
 // 跳牌阶段
 typedef enum
 {
-    JUMP_INIT,                     // 初始化
-    JUMP_CONV_START,               // 第1层，传送带启动
-    JUMP_CONV_WAIT_TILE,           // 第1层，等待传送带的牌
-    JUMP_TRAY_UP_START,            // 托盘上升启动
-    JUMP_TRAY_UP_WAIT_COMPLETE,    // 等待托盘上升完成
-    JUMP_WAIT_TILE_CAUGHT,         // 等待牌被接走
-    JUMP_TRAY_RESET_START,         // 托盘复位启动
-    JUMP_TRAY_RESET_WAIT_COMPLETE, // 等待托盘复位完成
-    JUMP_PHASE_COMPLETE            // 跳牌阶段完成
+    JUMP_INIT,                       // 初始化
+    JUMP_TRAY_DOWN_B1_START,         // 托盘下降启动
+    JUMP_TRAY_DOWN_B1_WAIT_COMPLETE, // 等待托盘下降完成
+    JUMP_CONV_START,                 // 第1层，传送带启动
+    JUMP_CONV_WAIT_TILE,             // 第1层，等待传送带的牌
+    JUMP_TRAY_UP_START,              // 托盘上升启动
+    JUMP_TRAY_UP_WAIT_COMPLETE,      // 等待托盘上升完成
+    JUMP_WAIT_TILE_CAUGHT,           // 等待牌被接走
+    JUMP_TRAY_RESET_START,           // 托盘复位启动
+    JUMP_TRAY_RESET_WAIT_COMPLETE,   // 等待托盘复位完成
+    JUMP_PHASE_COMPLETE              // 跳牌阶段完成
 } JumpingSubState;
 
 // 单张摸牌并补牌阶段
