@@ -12,6 +12,9 @@
 #define MOTOR_ELEVATOR_B1 0x08
 #define MOTOR_ELEVATOR_B2 0x09
 
+#define MOTOR_LID_OPEN 0x0A
+#define MOTOR_LID_CLOSE 0x0B
+
 // 阶段判断
 typedef enum
 {
@@ -19,6 +22,7 @@ typedef enum
     PHASE_DEALING,       // 发牌阶段
     PHASE_JUMPING,       // 跳牌阶段
     PHASE_SINGLE_REFILL, // 单张摸牌并补牌阶段
+    PHASE_OVER,          // 阶段结束
     PHASE_ERROR          // 错误状态
 } GlobalPhase;
 
@@ -37,9 +41,6 @@ typedef enum
     DEAL_TRAY_UP_START,              // 托盘上升启动
     DEAL_TRAY_UP_WAIT_COMPLETE,      // 等待托盘上升完成
     DEAL_WAIT_TILE_CAUGHT,           // 等待牌被接走
-    DEAL_TRAY_RESET_START,           // 托盘复位启动
-    DEAL_TRAY_RESET_WAIT_COMPLETE,   // 等待托盘复位完成
-    DEAL_PHASE_COMPLETE              // 发牌阶段完成
 } DealingSubState;
 
 // 跳牌阶段
@@ -53,24 +54,29 @@ typedef enum
     JUMP_TRAY_UP_START,              // 托盘上升启动
     JUMP_TRAY_UP_WAIT_COMPLETE,      // 等待托盘上升完成
     JUMP_WAIT_TILE_CAUGHT,           // 等待牌被接走
-    JUMP_TRAY_RESET_START,           // 托盘复位启动
-    JUMP_TRAY_RESET_WAIT_COMPLETE,   // 等待托盘复位完成
-    JUMP_PHASE_COMPLETE              // 跳牌阶段完成
 } JumpingSubState;
 
 // 单张摸牌并补牌阶段
 typedef enum
 {
-    REFILL_INIT,                     // 初始化
-    REFILL_CONV_START,               // 第1层，传送带启动
-    REFILL_CONV_WAIT_TILE,           // 第1层，等待传送带的牌
-    REFILL_TRAY_UP_START,            // 托盘上升启动
-    REFILL_TRAY_UP_WAIT_COMPLETE,    // 等待托盘上升完成
-    REFILL_WAIT_TILE_CAUGHT,         // 等待牌被接走
-    REFILL_TRAY_RESET_START,         // 托盘复位启动
-    REFILL_TRAY_RESET_WAIT_COMPLETE, // 等待托盘复位完成
-    REFILL_PHASE_COMPLETE            // 单张摸牌并补牌阶段完成
+    REFILL_INIT,                       // 初始化
+    REFILL_TRAY_DOWN_B1_START,         // 托盘下降启动
+    REFILL_TRAY_DOWN_B1_WAIT_COMPLETE, // 等待托盘下降完成
+    REFILL_CONV_START,                 // 第1层，传送带启动
+    REFILL_CONV_WAIT_TILE,             // 第1层，等待传送带的牌
+    REFILL_TRAY_UP_START,              // 托盘上升启动
+    REFILL_TRAY_UP_WAIT_COMPLETE,      // 等待托盘上升完成
+    REFILL_WAIT_TILE_CAUGHT,           // 等待牌被接走
 } SingleRefillSubState;
+
+typedef enum
+{
+    OVER_INIT,                    // 初始化
+    OVER_LID_OPEN_START,          // 托盘下降启动
+    OVER_LID_OPEN_WAIT_COMPLETE,  // 等待托盘下降完成
+    OVER_LID_CLOSE_START,         // 托盘上升启动
+    OVER_LID_CLOSE_WAIT_COMPLETE, // 等待托盘上升完成
+} OverSubState;
 
 void mahjong_init();
 void mahjong_task();
