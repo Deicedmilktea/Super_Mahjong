@@ -2,11 +2,15 @@
 #include "driver.h"
 #include "string.h"
 #include "bsp_gpio.h"
+#include "ws2812.h"
+#include "tim.h"
 
-static Driver_Instance *driver;                                                                                    // 驱动板实例
-static Motor_Instance *motor_push_1, *motor_push_2, *motor_elevator, *motor_lid;                                   // 电机实例
-static Motor_Instance *motor_turntable, *motor_conveyor_1, *motor_conveyor_2;                                      // 电机实例
-static GPIOInstance *gpio_key1, *gpio_key2, *gpio_red_1, *gpio_red_2;                                              // GPIO实例
+static Driver_Instance *driver;                                                        // 驱动板实例
+static Motor_Instance *motor_push_1, *motor_push_2, *motor_elevator, *motor_turntable; // 电机实例
+static Motor_Instance *motor_conveyor_1, *motor_conveyor_2;                            // 电机实例
+static GPIOInstance *gpio_key1, *gpio_key2, *gpio_red_1, *gpio_red_2;                  // GPIO实例
+static WS2812_Instance *ws2812;                                                        // WS2812实例
+
 static int16_t key1_count, key2_count, ir_left_count, last_ir_left_count, ir_right_count, last_ir_right_count = 0; // 按键次数
 static uint8_t phase = 1;                                                                                          // 轮数
 static uint8_t dealStep, jumpStep, refillStep = 0;                                                                 // 发牌和跳步
@@ -56,14 +60,14 @@ void mahjong_init()
     motor_push_1 = MotorRegister(&motor_config);
     motor_push_2 = MotorRegister(&motor_config);
     motor_elevator = MotorRegister(&motor_config);
-    motor_lid = MotorRegister(&motor_config);
+    motor_turntable = MotorRegister(&motor_config);
 
     Driver_Init_Config_s init_config = {
         .motor = {
             motor_push_1,
             motor_push_2,
             motor_elevator,
-            motor_lid,
+            motor_turntable,
         },
     };
     driver = DriverInit(&init_config);
@@ -105,6 +109,9 @@ void mahjong_init()
     {
         USARTSend(driver->usart, (uint8_t *)commands[i], strlen(commands[i]), USART_TRANSFER_BLOCKING);
     }
+
+    // WS2812初始化
+    ws2812 = WS2812_Init(&htim3, TIM_CHANNEL_1, &hdma_tim3_ch1_trig, WS2812_LED_NUM);
 }
 
 void mahjong_task()
@@ -151,6 +158,9 @@ void mahjong_task()
         driver->stop_flag = MOTOR_ENABLED;
 
     MotorControl(driver);
+
+    // char *pwm_cmd = "$pwm:3600,0,0,0#";
+    // USARTSend(driver->usart, pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
 }
 
 static void Key1Callback(GPIOInstance *gpio)
@@ -162,7 +172,7 @@ static void Key1Callback(GPIOInstance *gpio)
         MotorSetRef(motor_push_1, motor_push_1->measure.init_ecd + 1000); // 推牌参数1000
         MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd + 1000);
         MotorSetRef(motor_elevator, motor_elevator->measure.init_ecd + 1000);
-        MotorSetRef(motor_lid, motor_lid->measure.init_ecd + 1000);
+        MotorSetRef(motor_turntable, motor_turntable->measure.init_ecd + 1000);
     }
 
     else
@@ -170,7 +180,7 @@ static void Key1Callback(GPIOInstance *gpio)
         MotorSetRef(motor_push_1, motor_push_1->measure.init_ecd);
         MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd);
         MotorSetRef(motor_elevator, motor_elevator->measure.init_ecd);
-        MotorSetRef(motor_lid, motor_lid->measure.init_ecd);
+        MotorSetRef(motor_turntable, motor_turntable->measure.init_ecd);
     }
 }
 

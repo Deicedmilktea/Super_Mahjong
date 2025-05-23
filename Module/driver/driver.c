@@ -208,7 +208,7 @@ void MotorControl(Driver_Instance *driver)
     if (driver->stop_flag == MOTOR_STOP)
     {
         char *pwm_cmd = "$pwm:0,0,0,0#";
-        USARTSend(driver->usart, pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
+        USARTSend(driver->usart, (uint8_t *)pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
     }
     else
     {

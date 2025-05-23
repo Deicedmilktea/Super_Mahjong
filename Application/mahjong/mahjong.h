@@ -15,6 +15,8 @@
 #define MOTOR_LID_OPEN 0x0A
 #define MOTOR_LID_CLOSE 0x0B
 
+#define WS2812_LED_NUM 20
+
 // 阶段判断
 typedef enum
 {
