@@ -48,6 +48,9 @@ Driver_Instance *DriverInit(Driver_Init_Config_s *init_config)
         driver->motor[i] = init_config->motor[i];
     }
 
+    driver->stop_flag = MOTOR_STOP;              // 默认状态为停止
+    driver->callback_flag = MOTOR_CALLBACK_NONE; // 默认没有回调标志
+
     driver_instances[idx++] = driver; // 将驱动板实例添加到数组中
 
     return driver;

@@ -60,6 +60,13 @@ typedef enum
     MOTOR_ENABLED = 1,
 } Motor_Working_Type_e;
 
+/* 接收电机返回信号标志 */
+typedef enum
+{
+    MOTOR_CALLBACK_NONE,   // 无信号接收
+    MOTOR_CALLBACK_NORMAL, // 正常接收信号
+} Motor_Callback_Flag_e;
+
 /**
  * @brief 电机控制器初始化结构体,包括三环PID的配置以及两个反馈数据来源指针
  *        如果不需要某个控制环,可以不设置对应的pid config
@@ -156,9 +163,10 @@ typedef struct
 typedef struct
 {
     uint8_t mahjong_phase;
-    Motor_Instance *motor[MOTOR_CNT]; // 电机实例数组,最多4个电机
-    USART_Instance *usart;            // 电机实例对应的串口实例
-    Motor_Working_Type_e stop_flag;   // 启停标志
+    Motor_Instance *motor[MOTOR_CNT];    // 电机实例数组,最多4个电机
+    USART_Instance *usart;               // 电机实例对应的串口实例
+    Motor_Working_Type_e stop_flag;      // 启停标志
+    Motor_Callback_Flag_e callback_flag; // 接收信号标志
 } Driver_Instance;
 
 /***

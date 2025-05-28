@@ -41,9 +41,9 @@ void mahjong_init()
     Motor_Init_Config_s motor_config = {
         .controller_param_init_config = {
             .angle_PID = {
-                .Kp = 1,     // 0.2 0.3
-                .Ki = 0,     // 0
-                .Kd = 0.015, // 0.015
+                .Kp = 5,    // 0.2 0.3 1
+                .Ki = 0.05, // 0
+                .Kd = 0.15, // 0.015
                 .Improve = PID_Integral_Limit | PID_Derivative_On_Measurement,
                 .MaxOut = 2000,
                 .DeadBand = 10,
@@ -111,7 +111,7 @@ void mahjong_init()
     }
 
     // WS2812初始化
-    ws2812 = WS2812_Init(&htim3, TIM_CHANNEL_1, &hdma_tim3_ch1_trig, WS2812_LED_NUM);
+    // ws2812 = WS2812_Init(&htim3, TIM_CHANNEL_1, &hdma_tim3_ch1_trig, WS2812_LED_NUM);
 }
 
 void mahjong_task()
@@ -152,15 +152,15 @@ void mahjong_task()
         phase = 0;
     }
 
-    if (key2_count % 2 == 1)
+    if (key2_count % 2 == 1 || driver->callback_flag == MOTOR_CALLBACK_NONE) // 回调异常断电
         driver->stop_flag = MOTOR_STOP;
     else
         driver->stop_flag = MOTOR_ENABLED;
 
     MotorControl(driver);
 
-    // char *pwm_cmd = "$pwm:3600,0,0,0#";
-    // USARTSend(driver->usart, pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
+    // char *pwm_cmd = "$pwm:1000,1000,0,0#";
+    // USARTSend(driver->usart, (uint8_t *)pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
 }
 
 static void Key1Callback(GPIOInstance *gpio)
@@ -169,7 +169,7 @@ static void Key1Callback(GPIOInstance *gpio)
 
     if (key1_count % 2 == 1)
     {
-        MotorSetRef(motor_push_1, motor_push_1->measure.init_ecd + 1000); // 推牌参数1000
+        MotorSetRef(motor_push_1, motor_push_1->measure.init_ecd - 1000); // 推牌参数1000 向上为负
         MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd + 1000);
         MotorSetRef(motor_elevator, motor_elevator->measure.init_ecd + 1000);
         MotorSetRef(motor_turntable, motor_turntable->measure.init_ecd + 1000);
