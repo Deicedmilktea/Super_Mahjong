@@ -64,6 +64,7 @@ void DriverCallback(USART_Instance *_usart_instance)
 
     if (rx_len < 16 || rx_len > USART_RXBUFF_LIMIT || rx_buf[0] != '$' || rx_buf[rx_len - 3] != '#')
     {
+        driver_instance->callback_flag = MOTOR_CALLBACK_NORMAL; // 设置回调标志为正常接收信号
         return;
     }
 
@@ -144,7 +145,7 @@ void MotorControl(Driver_Instance *driver)
     float pid_measure, pid_ref;             // 电机PID测量值和设定值
 
     // 遍历所有电机实例,进行串级PID的计算并设置发送报文的值
-    for (size_t i = 0; i < 1; ++i)
+    for (size_t i = 0; i < MOTOR_CNT; ++i)
     { // 减小访存开销,先保存指针引用
         motor = driver->motor[i];
         motor_setting = &motor->motor_settings;
@@ -203,6 +204,7 @@ void MotorControl(Driver_Instance *driver)
         // }
 
         // 获取最终输出
+        motor_controller->pid_out = pid_ref;
         set[i] = (int16_t)pid_ref;
     }
 

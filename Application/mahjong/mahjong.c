@@ -116,51 +116,52 @@ void mahjong_init()
 
 void mahjong_task()
 {
-    // 确定所属阶段
-    switch (global_phase)
-    {
-    case PHASE_IDLE:
-        phase_idle_task();
-        break;
+    // // 确定所属阶段
+    // switch (global_phase)
+    // {
+    // case PHASE_IDLE:
+    //     phase_idle_task();
+    //     break;
 
-    case PHASE_DEALING:
-        phase_dealing_task();
-        break;
+    // case PHASE_DEALING:
+    //     phase_dealing_task();
+    //     break;
 
-    case PHASE_JUMPING:
-        phase_jumping_task();
-        break;
+    // case PHASE_JUMPING:
+    //     phase_jumping_task();
+    //     break;
 
-    case PHASE_SINGLE_REFILL:
-        phase_single_refill_task();
-        break;
+    // case PHASE_SINGLE_REFILL:
+    //     phase_single_refill_task();
+    //     break;
 
-    case PHASE_OVER:
-        phase_over_task();
+    // case PHASE_OVER:
+    //     phase_over_task();
 
-    case PHASE_ERROR:
-        phase_error_task();
-        break;
+    // case PHASE_ERROR:
+    //     phase_error_task();
+    //     break;
 
-    default:
-        break;
-    }
+    // default:
+    //     break;
+    // }
 
-    if (phase)
-    {
-        driver->mahjong_phase = 1;
-        phase = 0;
-    }
+    // if (phase)
+    // {
+    //     driver->mahjong_phase = 1;
+    //     phase = 0;
+    // }
 
-    if (key2_count % 2 == 1 || driver->callback_flag == MOTOR_CALLBACK_NONE) // 回调异常断电
+    // if (key2_count % 2 == 1 || driver->callback_flag == MOTOR_CALLBACK_NONE) // 回调异常断电
+    if (driver->callback_flag == MOTOR_CALLBACK_NONE) // 回调异常断电
         driver->stop_flag = MOTOR_STOP;
     else
         driver->stop_flag = MOTOR_ENABLED;
 
-    MotorControl(driver);
+    // MotorControl(driver);
 
-    // char *pwm_cmd = "$pwm:1000,1000,0,0#";
-    // USARTSend(driver->usart, (uint8_t *)pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
+    char *pwm_cmd = "$pwm:0,0,1000,500#";
+    USARTSend(driver->usart, (uint8_t *)pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
 }
 
 static void Key1Callback(GPIOInstance *gpio)
@@ -169,24 +170,34 @@ static void Key1Callback(GPIOInstance *gpio)
 
     if (key1_count % 2 == 1)
     {
-        MotorSetRef(motor_push_1, motor_push_1->measure.init_ecd - 1000); // 推牌参数1000 向上为负
-        MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd + 1000);
-        MotorSetRef(motor_elevator, motor_elevator->measure.init_ecd + 1000);
-        MotorSetRef(motor_turntable, motor_turntable->measure.init_ecd + 1000);
+        MotorSetRef(motor_push_1, motor_push_1->measure.init_ecd + 1000); // 推牌参数1000 前进为正
+        // MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd - 1000); // 升牌参数1000 向上为负
+        // MotorSetRef(motor_elevator, motor_elevator->measure.init_ecd + 1000);
+        // MotorSetRef(motor_turntable, motor_turntable->measure.init_ecd + 1000);
     }
 
     else
     {
         MotorSetRef(motor_push_1, motor_push_1->measure.init_ecd);
-        MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd);
-        MotorSetRef(motor_elevator, motor_elevator->measure.init_ecd);
-        MotorSetRef(motor_turntable, motor_turntable->measure.init_ecd);
+        // MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd);
+        // MotorSetRef(motor_elevator, motor_elevator->measure.init_ecd);
+        // MotorSetRef(motor_turntable, motor_turntable->measure.init_ecd);
     }
 }
 
 static void Key2Callback(GPIOInstance *gpio)
 {
     key2_count++;
+
+    if (key2_count % 2 == 1)
+    {
+        MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd - 1000); // 升牌参数1000 向上为负
+    }
+
+    else
+    {
+        MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd);
+    }
 }
 
 static void Red1Callback(GPIOInstance *gpio)

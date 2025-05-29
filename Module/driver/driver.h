@@ -134,7 +134,7 @@ typedef struct
 typedef struct
 {
     int16_t init_ecd;         // 编码器初始值
-    uint16_t last_ecd;        // 上一次读取的编码器值
+    int16_t last_ecd;         // 上一次读取的编码器值
     int16_t ecd;              // 0-8191,刻度总共有8192格 (modified to support negative values)
     float angle_single_round; // 单圈角度
     int32_t total_ecd;        // 总编码器值,注意方向 (modified to support negative values)
