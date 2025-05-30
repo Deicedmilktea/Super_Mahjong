@@ -33,13 +33,6 @@ Driver_Instance *DriverInit(Driver_Init_Config_s *init_config)
     Driver_Instance *driver = (Driver_Instance *)malloc(sizeof(Driver_Instance));
     memset(driver, 0, sizeof(Driver_Instance));
 
-    init_config->usart_config = (USART_Init_Config_s){
-        .recv_buff_size = USART_RXBUFF_LIMIT,
-        .usart_handle = &huart2,
-        .id = driver,
-        .usart_module_callback = DriverCallback,
-    };
-
     // 注册usart实例
     driver->usart = USARTRegister(&init_config->usart_config);
 

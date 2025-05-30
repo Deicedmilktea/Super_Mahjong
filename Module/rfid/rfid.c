@@ -7,9 +7,8 @@
 #define MAX_RFID_INSTANCES 1 // Maximum number of RFID modules
 static RFID_Instance *rfid_instances[MAX_RFID_INSTANCES] = {NULL};
 static uint8_t idx = 0;
-
-// Forward declaration of the callback
-static void RFIDCallback(USART_Instance *_usart_instance);
+static uint16_t last_draw_index = 0;    // 上次摸牌的索引
+static uint16_t last_discard_index = 0; // 上次弃牌的索引
 
 /**
  * @brief Initializes an RFID queue.
@@ -90,7 +89,7 @@ uint8_t RFIDDequeue(RFIDQueue *queue, Tile *tile)
  * @param usart_handle Pointer to the USART_HandleTypeDef for this RFID module.
  * @return Pointer to the initialized RFID_Instance instance, or NULL on failure.
  */
-RFID_Instance *RFIDInit(UART_HandleTypeDef *usart_handle)
+RFID_Instance *RFIDInit(RFID_Init_Config_s *init_config)
 {
     if (idx >= MAX_RFID_INSTANCES)
     {
@@ -107,14 +106,7 @@ RFID_Instance *RFIDInit(UART_HandleTypeDef *usart_handle)
     RFIDQueueInit(&rfid_instance->draw_tile);
     RFIDQueueInit(&rfid_instance->discard_tile);
 
-    USART_Init_Config_s usart_config = {
-        .recv_buff_size = USART_RXBUFF_LIMIT, // Assuming USART_RXBUFF_LIMIT is defined elsewhere
-        .usart_handle = usart_handle,
-        .id = rfid_instance, // Pass the rfid_instance as ID
-        .usart_module_callback = RFIDCallback,
-    };
-
-    rfid_instance->usart = USARTRegister(&usart_config);
+    rfid_instance->usart = USARTRegister(&init_config->usart_config);
     if (!rfid_instance->usart)
     {
         free(rfid_instance);
@@ -129,99 +121,53 @@ RFID_Instance *RFIDInit(UART_HandleTypeDef *usart_handle)
  * @brief USART callback function for RFID data.
  * @param _usart_instance Pointer to the USART_Instance that triggered the callback.
  */
-static void RFIDCallback(USART_Instance *_usart_instance)
+void RFIDCallback(USART_Instance *_usart_instance)
 {
     if (!_usart_instance || !_usart_instance->id)
     {
-        return;
+        return; // Basic validation: ensure usart_instance and its ID are valid
     }
 
     RFID_Instance *rfid_instance = (RFID_Instance *)_usart_instance->id;
     uint8_t *rx_buf = rfid_instance->usart->recv_buff;
     uint16_t rx_len = rfid_instance->usart->data_len;
 
-    // Basic validation: must start with '$' and end with '#' (before CR/LF)
-    // Example: $DRAW:12# or $DISC:34#
-    if (rx_len < 7 || rx_buf[0] != '$' || rx_buf[rx_len - 1] != '#') // Adjusted for typical CR/LF, check actual termination
+    // Check if received data length is sufficient for RFID_Receive_Data_s
+    if (rx_len != sizeof(RFID_Receive_Data_s) || rx_buf[0] != RFID_DATA_HEAD)
     {
-        // If data ends with CR/LF, adjust index: e.g., rx_buf[rx_len - 3] == '#' for \r\n
-        // For simplicity, assuming '#' is the very last char or just before it.
-        // This part might need adjustment based on actual data stream termination.
-        if (rx_len >= 3 && rx_buf[0] == '$' && rx_buf[rx_len - 3] == '#') // Check for $...#\r\n
-        {
-            // Valid frame ending with #\r\n
-        }
-        else if (rx_len >= 2 && rx_buf[0] == '$' && rx_buf[rx_len - 2] == '#') // Check for $...#\n
-        {
-            // Valid frame ending with #\n
-        }
-        else
-        {
-            return; // Invalid frame
-        }
+        return;
     }
 
-    char temp_buf[rx_len + 1];
-    memcpy(temp_buf, rx_buf, rx_len);
-    temp_buf[rx_len] = '\0'; // Null-terminate for string functions
+    // Copy the received buffer into a local variable to ensure alignment and avoid modifying the buffer directly
+    RFID_Receive_Data_s received_data;
+    memcpy(&received_data, rx_buf, sizeof(RFID_Receive_Data_s));
 
-    int tile_value;
-    Tile new_tile; // Assuming Tile can be assigned an int or has a field for it.
-                   // This might need adjustment based on Tile definition.
-
-    // // Parse $DRAW:tile_id#
-    // if (strncmp(temp_buf, "$DRAW:", 6) == 0)
-    // {
-    //     if (sscanf(temp_buf, "$DRAW:%d#", &tile_value) == 1)
-    //     {
-    //         // Assuming Tile is a simple type or has a field like 'id'
-    //         // If Tile is a struct, e.g., typedef struct { int id; Suit suit; } Tile;
-    //         // then new_tile.id = tile_value; and potentially set other fields.
-    //         // For now, direct assignment or casting if Tile is an int alias.
-    //         // This is a placeholder. Actual Tile assignment depends on its definition.
-    //         if (sizeof(Tile) == sizeof(int))
-    //         { // Basic check
-    //             memcpy(&new_tile, &tile_value, sizeof(Tile));
-    //         }
-    //         else
-    //         {
-    //             // Handle complex Tile structure assignment here
-    //             // e.g. new_tile.id = tile_value;
-    //             // For now, let's assume Tile is just an int for simplicity
-    //             if (sizeof(int) <= sizeof(Tile)) // Check if tile_value can fit
-    //                 new_tile = (Tile)tile_value; // This is a simplification
-    //             else
-    //             {
-    //                 // Error or more complex mapping
-    //                 return;
-    //             }
-    //         }
-    //         RFIDEnqueue(&rfid_instance->draw_tile, new_tile);
-    //     }
-    // }
-    // // Parse $DISC:tile_id#
-    // else if (strncmp(temp_buf, "$DISC:", 6) == 0)
-    // {
-    //     if (sscanf(temp_buf, "$DISC:%d#", &tile_value) == 1)
-    //     {
-    //         // Similar to $DRAW, assuming Tile can be represented by tile_value
-    //         if (sizeof(Tile) == sizeof(int))
-    //         {
-    //             memcpy(&new_tile, &tile_value, sizeof(Tile));
-    //         }
-    //         else
-    //         {
-    //             if (sizeof(int) <= sizeof(Tile))
-    //                 new_tile = (Tile)tile_value; // Simplification
-    //             else
-    //             {
-    //                 return;
-    //             }
-    //         }
-    //         RFIDEnqueue(&rfid_data->discard_tile, new_tile);
-    //     }
-    // }
-    // // Add more parsers for other RFID commands if needed
+    // Process the received data based on the action
+    switch (received_data.action)
+    {
+    case ACTION_DRAW:
+        if (received_data.index > last_draw_index)
+        {
+            Tile tile;
+            tile.type = received_data.type;
+            tile.value = received_data.value;
+            RFIDEnqueue(&rfid_instance->draw_tile, tile);
+            last_draw_index = received_data.index;
+        }
+        break;
+    case ACTION_DISCARD:
+        if (received_data.index > last_discard_index)
+        {
+            Tile tile;
+            tile.type = received_data.type;
+            tile.value = received_data.value;
+            RFIDEnqueue(&rfid_instance->discard_tile, tile);
+            last_discard_index = received_data.index;
+        }
+        break;
+    default:
+        break;
+    }
 }
 
 /**

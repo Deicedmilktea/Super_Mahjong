@@ -4,12 +4,16 @@
 #include "bsp_gpio.h"
 #include "ws2812.h"
 #include "tim.h"
+#include "rfid.h"
+#include "ai.h"
 
 static Driver_Instance *driver;                                                        // 驱动板实例
 static Motor_Instance *motor_push_1, *motor_push_2, *motor_elevator, *motor_turntable; // 电机实例
 static Motor_Instance *motor_conveyor_1, *motor_conveyor_2;                            // 电机实例
 static GPIOInstance *gpio_key1, *gpio_key2, *gpio_red_1, *gpio_red_2;                  // GPIO实例
 static WS2812_Instance *ws2812;                                                        // WS2812实例
+static RFID_Instance *rfid;                                                            // RFID实例
+static AI_Instance *ai;                                                                // AI实例
 
 static int16_t key1_count, key2_count, ir_left_count, last_ir_left_count, ir_right_count, last_ir_right_count = 0; // 按键次数
 static uint8_t phase = 1;                                                                                          // 轮数
@@ -69,8 +73,34 @@ void mahjong_init()
             motor_elevator,
             motor_turntable,
         },
+        .usart_config = {
+            .recv_buff_size = USART_RXBUFF_LIMIT,
+            .usart_handle = &huart2,                 // 使用USART2
+            .id = driver,                            // 传入驱动板实例
+            .usart_module_callback = DriverCallback, // 串口回调函数
+        },
     };
     driver = DriverInit(&init_config);
+
+    RFID_Init_Config_s rfid_init_config = {
+        .usart_config = {
+            .recv_buff_size = USART_RXBUFF_LIMIT,
+            .usart_handle = &huart3,               // 使用USART3
+            .id = rfid,                            // 传入RFID实例
+            .usart_module_callback = RFIDCallback, // 串口回调函数
+        },
+    };
+    rfid = RFIDInit(&rfid_init_config);
+
+    AI_Init_Config_s ai_init_config = {
+        .usart_config = {
+            .recv_buff_size = AI_RECV_SIZE,
+            .usart_handle = &huart1,             // 使用USART1
+            .id = ai,                            // 传入AI实例
+            .usart_module_callback = AICallback, // 串口回调函数
+        },
+    };
+    ai = AIInit(&ai_init_config);
 
     // 按键初始化
     GPIO_Init_Config_s gpio_init = {
