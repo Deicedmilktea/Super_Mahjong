@@ -19,6 +19,8 @@
 
 #define WS2812_LED_NUM 20
 
+#define L298N_MOTOR_PWM 500 // L298N电机PWM值
+
 #define NUM_PLAYERS 4 // 玩家数量
 
 // 阶段判断

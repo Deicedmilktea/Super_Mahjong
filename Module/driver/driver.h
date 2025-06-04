@@ -56,8 +56,8 @@ typedef enum
 /* 电机启停标志 */
 typedef enum
 {
-    MOTOR_STOP = 0,
-    MOTOR_ENABLED = 1,
+    MOTOR_FLAG_STOP = 0,
+    MOTOR_FLAG_ENABLED = 1,
 } Motor_Working_Type_e;
 
 /* 接收电机返回信号标志 */

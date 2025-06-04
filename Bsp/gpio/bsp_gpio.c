@@ -3,7 +3,7 @@
 #include "stdlib.h"
 
 static uint8_t idx;
-static GPIOInstance *gpio_instance[GPIO_MX_DEVICE_NUM] = {NULL};
+static GPIO_Instance *gpio_instance[GPIO_MX_DEVICE_NUM] = {NULL};
 
 /**
  * @brief EXTI中断回调函数,根据GPIO_Pin找到对应的GPIOInstance,并调用模块回调函数(如果有)
@@ -15,7 +15,7 @@ static GPIOInstance *gpio_instance[GPIO_MX_DEVICE_NUM] = {NULL};
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
     // 如有必要,可以根据pinstate和HAL_GPIO_ReadPin来判断是上升沿还是下降沿/rise&fall等
-    GPIOInstance *gpio;
+    GPIO_Instance *gpio;
     for (size_t i = 0; i < idx; i++)
     {
         gpio = gpio_instance[i];
@@ -27,10 +27,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     }
 }
 
-GPIOInstance *GPIORegister(GPIO_Init_Config_s *GPIO_config)
+GPIO_Instance *GPIORegister(GPIO_Init_Config_s *GPIO_config)
 {
-    GPIOInstance *ins = (GPIOInstance *)malloc(sizeof(GPIOInstance));
-    memset(ins, 0, sizeof(GPIOInstance));
+    GPIO_Instance *ins = (GPIO_Instance *)malloc(sizeof(GPIO_Instance));
+    memset(ins, 0, sizeof(GPIO_Instance));
 
     ins->GPIOx = GPIO_config->GPIOx;
     ins->GPIO_Pin = GPIO_config->GPIO_Pin;
@@ -45,22 +45,22 @@ GPIOInstance *GPIORegister(GPIO_Init_Config_s *GPIO_config)
 // ----------------- GPIO API -----------------
 // 都是对HAL的形式上的封装,后续考虑增加GPIO state变量,可以直接读取state
 
-void GPIOToggel(GPIOInstance *_instance)
+void GPIOToggle(GPIO_Instance *_instance)
 {
-    HAL_GPIO_TogglePin(_instance->GPIOx, _instance->GPIO_Pin);
+    HAL_GPIO_TogglePin((GPIO_TypeDef *)_instance->GPIOx, _instance->GPIO_Pin);
 }
 
-void GPIOSet(GPIOInstance *_instance)
+void GPIOSet(GPIO_Instance *_instance)
 {
-    HAL_GPIO_WritePin(_instance->GPIOx, _instance->GPIO_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin((GPIO_TypeDef *)_instance->GPIOx, _instance->GPIO_Pin, GPIO_PIN_SET);
 }
 
-void GPIOReset(GPIOInstance *_instance)
+void GPIOReset(GPIO_Instance *_instance)
 {
-    HAL_GPIO_WritePin(_instance->GPIOx, _instance->GPIO_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin((GPIO_TypeDef *)_instance->GPIOx, _instance->GPIO_Pin, GPIO_PIN_RESET);
 }
 
-GPIO_PinState GPIORead(GPIOInstance *_instance)
+GPIO_PinState GPIORead(GPIO_Instance *_instance)
 {
-    return HAL_GPIO_ReadPin(_instance->GPIOx, _instance->GPIO_Pin);
+    return HAL_GPIO_ReadPin((GPIO_TypeDef *)_instance->GPIOx, _instance->GPIO_Pin);
 }

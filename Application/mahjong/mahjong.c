@@ -1,22 +1,23 @@
 #include "mahjong.h"
 #include "driver.h"
 #include "string.h"
-#include "bsp_gpio.h"
 #include "ws2812.h"
 #include "tim.h"
 #include "rfid.h"
 #include "ai.h"
+#include "l298n.h"
 
 static Driver_Instance *driver;                                                        // 驱动板实例
 static Motor_Instance *motor_push_1, *motor_push_2, *motor_elevator, *motor_turntable; // 电机实例
 static Motor_Instance *motor_conveyor_1, *motor_conveyor_2;                            // 电机实例
-static GPIOInstance *gpio_key1, *gpio_key2, *gpio_red_1, *gpio_red_2;                  // GPIO实例
+static GPIO_Instance *gpio_key1, *gpio_key2, *gpio_red_1, *gpio_red_2;                 // GPIO实例
 static WS2812_Instance *ws2812;                                                        // WS2812实例
 static RFID_Instance *rfid;                                                            // RFID实例
 static AI_Instance *ai;                                                                // AI实例
+static L298N_Instance *l298n;                                                          // L298N电机驱动板实例
 
 static int16_t key1_count, key2_count, ir_left_count, last_ir_left_count, ir_right_count, last_ir_right_count = 0; // 按键次数
-static uint8_t phase = 1;                                                                                          // 轮数
+static uint8_t phase, phase1 = 1;                                                                                  // 轮数
 static uint8_t dealStep, jumpStep, refillStep = 0;                                                                 // 发牌和跳步
 
 static GlobalPhase global_phase = PHASE_IDLE;
@@ -25,10 +26,10 @@ static JumpingSubState jumping_sub_state = JUMP_INIT;
 static SingleRefillSubState single_refill_sub_state = REFILL_INIT;
 static OverSubState over_sub_state = OVER_INIT;
 
-static void Key1Callback(GPIOInstance *gpio);
-static void Key2Callback(GPIOInstance *gpio);
-static void Red1Callback(GPIOInstance *gpio);
-static void Red2Callback(GPIOInstance *gpio);
+static void Key1Callback(GPIO_Instance *gpio);
+static void Key2Callback(GPIO_Instance *gpio);
+static void Red1Callback(GPIO_Instance *gpio);
+static void Red2Callback(GPIO_Instance *gpio);
 
 static void phase_idle_task();
 static void phase_dealing_task();
@@ -101,6 +102,45 @@ void mahjong_init()
         },
     };
     ai = AIInit(&ai_init_config);
+
+    L298N_Init_Config_s l298n_init_config = {
+        .gpio_ena_config = {
+            .GPIOx = GPIOD,
+            .GPIO_Pin = GPIO_PIN_12,
+            .timer_handle = &htim4,
+            .timer_channel = TIM_CHANNEL_1,
+        },
+        .gpio_a1_config = {
+            .GPIOx = GPIOG,
+            .GPIO_Pin = GPIO_PIN_2,
+        },
+        .gpio_a2_config = {
+            .GPIOx = GPIOG,
+            .GPIO_Pin = GPIO_PIN_4,
+        },
+        .pwm_ena = L298N_MOTOR_PWM,
+        .mode_a = MOTOR_STOP,
+
+        .gpio_enb_config = {
+            .GPIOx = GPIOD,
+            .GPIO_Pin = GPIO_PIN_13,
+            .timer_handle = &htim4,
+            .timer_channel = TIM_CHANNEL_2,
+        },
+        .gpio_b1_config = {
+            .GPIOx = GPIOG,
+            .GPIO_Pin = GPIO_PIN_3,
+        },
+        .gpio_b2_config = {
+            .GPIOx = GPIOG,
+            .GPIO_Pin = GPIO_PIN_5,
+        },
+        .pwm_enb = L298N_MOTOR_PWM,
+        .mode_b = MOTOR_STOP,
+    };
+    l298n = L298NInit(&l298n_init_config);
+    // HAL_TIM_PWM_Start((TIM_HandleTypeDef *)l298n->gpio_ena->timer_handle, l298n->gpio_ena->timer_channel);
+    // HAL_TIM_PWM_Start((TIM_HandleTypeDef *)l298n->gpio_enb->timer_handle, l298n->gpio_enb->timer_channel);
 
     // 按键初始化
     GPIO_Init_Config_s gpio_init = {
@@ -182,19 +222,24 @@ void mahjong_task()
     //     phase = 0;
     // }
 
-    // if (key2_count % 2 == 1 || driver->callback_flag == MOTOR_CALLBACK_NONE) // 回调异常断电
-    if (driver->callback_flag == MOTOR_CALLBACK_NONE) // 回调异常断电
-        driver->stop_flag = MOTOR_STOP;
-    else
-        driver->stop_flag = MOTOR_ENABLED;
+    // // if (key2_count % 2 == 1 || driver->callback_flag == MOTOR_CALLBACK_NONE) // 回调异常断电
+    // if (driver->callback_flag == MOTOR_CALLBACK_NONE) // 回调异常断电
+    //     driver->stop_flag = MOTOR_STOP;
+    // else
+    //     driver->stop_flag = MOTOR_ENABLED;
 
-    // MotorControl(driver);
+    // // MotorControl(driver);
 
-    char *pwm_cmd = "$pwm:0,0,1000,500#";
-    USARTSend(driver->usart, (uint8_t *)pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
+    // char *pwm_cmd = "$pwm:1000,0,0,0#";
+    // USARTSend(driver->usart, (uint8_t *)pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
+    // HAL_GPIO_WritePin(GPIOG, GPIO_PIN_2, GPIO_PIN_SET);
+    // HAL_GPIO_WritePin(GPIOG, GPIO_PIN_4, GPIO_PIN_RESET);
+    // phase = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_2);
+    // phase1 = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_4);
+    L298NControl(l298n, MOTOR_FORWARD, MOTOR_FORWARD); // 启动L298N电机驱动板A通道
 }
 
-static void Key1Callback(GPIOInstance *gpio)
+static void Key1Callback(GPIO_Instance *gpio)
 {
     key1_count++;
 
@@ -215,7 +260,7 @@ static void Key1Callback(GPIOInstance *gpio)
     }
 }
 
-static void Key2Callback(GPIOInstance *gpio)
+static void Key2Callback(GPIO_Instance *gpio)
 {
     key2_count++;
 
@@ -230,12 +275,12 @@ static void Key2Callback(GPIOInstance *gpio)
     }
 }
 
-static void Red1Callback(GPIOInstance *gpio)
+static void Red1Callback(GPIO_Instance *gpio)
 {
     ir_left_count++;
 }
 
-static void Red2Callback(GPIOInstance *gpio)
+static void Red2Callback(GPIO_Instance *gpio)
 {
     ir_right_count++;
 }
@@ -356,7 +401,7 @@ static void phase_dealing_task()
         break;
     }
 
-    driver->stop_flag = MOTOR_ENABLED;
+    driver->stop_flag = MOTOR_FLAG_ENABLED;
 }
 
 /**
@@ -453,7 +498,7 @@ static void phase_jumping_task()
         break;
     }
 
-    driver->stop_flag = MOTOR_ENABLED;
+    driver->stop_flag = MOTOR_FLAG_ENABLED;
 }
 
 /**
@@ -523,7 +568,7 @@ static void phase_single_refill_task()
         break;
     }
 
-    driver->stop_flag = MOTOR_ENABLED;
+    driver->stop_flag = MOTOR_FLAG_ENABLED;
 }
 
 /**

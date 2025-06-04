@@ -41,7 +41,7 @@ Driver_Instance *DriverInit(Driver_Init_Config_s *init_config)
         driver->motor[i] = init_config->motor[i];
     }
 
-    driver->stop_flag = MOTOR_STOP;              // 默认状态为停止
+    driver->stop_flag = MOTOR_FLAG_STOP;         // 默认状态为停止
     driver->callback_flag = MOTOR_CALLBACK_NONE; // 默认没有回调标志
 
     driver_instances[idx++] = driver; // 将驱动板实例添加到数组中
@@ -203,7 +203,7 @@ void MotorControl(Driver_Instance *driver)
 
     // 发送电机控制数据
     // 发送数据格式: $pwm:0,0,0,0#
-    if (driver->stop_flag == MOTOR_STOP)
+    if (driver->stop_flag == MOTOR_FLAG_STOP)
     {
         char *pwm_cmd = "$pwm:0,0,0,0#";
         USARTSend(driver->usart, (uint8_t *)pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
