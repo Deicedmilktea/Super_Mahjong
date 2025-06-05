@@ -97,4 +97,20 @@ void WS2812_SetBrightness(WS2812_Instance *ws, uint8_t brightness);
  */
 void WS2812_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim);
 
+/**
+ * @brief Implements a flowing water light effect on the WS2812 strip.
+ * @param ws Pointer to the WS2812_Instance.
+ * @param r Red component (0-255) for the flowing light.
+ * @param g Green component (0-255) for the flowing light.
+ * @param b Blue component (0-255) for the flowing light.
+ * @param r Red component (0-255) for the base color.
+ * @param g Green component (0-255) for the base color.
+ * @param b Blue component (0-255) for the base color.
+ * @param flow_length Number of LEDs to be part of the 'lit' section of the flow.
+ * @param max_brightness Maximum brightness for the lit LEDs (0-255).
+ * @param min_brightness Minimum brightness for the dim LEDs (0-255).
+ * @param delay_ms Delay in milliseconds between each step of the flow.
+ */
+void WS2812_BrightnessFlow(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b, uint8_t flow_length, uint8_t max_brightness, uint8_t min_brightness, uint32_t delay_ms);
+
 #endif // !WS2812_H

@@ -17,7 +17,7 @@
 #define MOTOR_LID_OPEN 0x0A
 #define MOTOR_LID_CLOSE 0x0B
 
-#define WS2812_LED_NUM 20
+#define WS2812_LED_NUM 30
 
 #define L298N_MOTOR_PWM 500 // L298N电机PWM值
 

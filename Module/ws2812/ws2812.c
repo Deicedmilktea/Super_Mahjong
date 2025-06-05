@@ -49,17 +49,17 @@ WS2812_Instance *WS2812_Init(TIM_HandleTypeDef *htim, uint32_t channel, DMA_Hand
 
     ws2812_instances[ws2812_instance_idx++] = ws;
 
-    // It's crucial that the HAL_TIM_PWM_PulseFinishedCallback is correctly routed.
-    // This often involves defining HAL_TIM_PWM_PulseFinishedCallback in your stm32f4xx_it.c or similar
-    // and then calling this module's WS2812_TIM_PWM_PulseFinishedCallback if the htim matches.
-    // For example, in your HAL_TIM_PWM_PulseFinishedCallback:
-    // if (htim->Instance == TIMx) { // TIMx being the timer used for WS2812
-    //     WS2812_TIM_PWM_PulseFinishedCallback(htim);
-    // }
-
     return ws;
 }
 
+/**
+ * @brief Set the color of a single pixel in the WS2812 LED strip.
+ * @param ws Pointer to the WS2812 instance.
+ * @param pixel_n The pixel index to set (0-based).
+ * @param r Red color value (0-255).
+ * @param g Green color value (0-255).
+ * @param b Blue color value (0-255).
+ */
 void WS2812_SetPixelColor(WS2812_Instance *ws, uint16_t pixel_n, uint8_t r, uint8_t g, uint8_t b)
 {
     if (!ws || pixel_n >= ws->num_leds)
@@ -72,6 +72,13 @@ void WS2812_SetPixelColor(WS2812_Instance *ws, uint16_t pixel_n, uint8_t r, uint
     ws->led_data_buffer[pixel_n * 3 + 2] = b;
 }
 
+/**
+ * @brief Set the color of all pixels in the WS2812 LED strip.
+ * @param ws Pointer to the WS2812 instance.
+ * @param r Red color value (0-255).
+ * @param g Green color value (0-255).
+ * @param b Blue color value (0-255).
+ */
 void WS2812_SetAllPixelsColor(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b)
 {
     if (!ws)
@@ -84,6 +91,12 @@ void WS2812_SetAllPixelsColor(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t
     }
 }
 
+/**
+ * @brief Clear all pixels in the WS2812 LED strip (set to black).
+ * @param ws Pointer to the WS2812 instance.
+ * This function sets all pixels to black (0, 0, 0).
+ * It is equivalent to turning off all LEDs.
+ */
 void WS2812_Clear(WS2812_Instance *ws)
 {
     if (!ws)
@@ -93,6 +106,12 @@ void WS2812_Clear(WS2812_Instance *ws)
     WS2812_SetAllPixelsColor(ws, 0, 0, 0);
 }
 
+/**
+ * @brief Set the brightness of the WS2812 LED strip.
+ * @param ws Pointer to the WS2812 instance.
+ * @param brightness Brightness value (0-255).
+ * 0 is off, 255 is full brightness.
+ */
 void WS2812_SetBrightness(WS2812_Instance *ws, uint8_t brightness)
 {
     if (!ws)
@@ -102,6 +121,11 @@ void WS2812_SetBrightness(WS2812_Instance *ws, uint8_t brightness)
     ws->brightness = brightness;
 }
 
+/**
+ * @brief Show the current LED data on the WS2812 strip.
+ * This function prepares the PWM data for the WS2812 LEDs
+ * and starts the DMA transfer to send the data to the LEDs.
+ */
 void WS2812_Show(WS2812_Instance *ws)
 {
     if (!ws || !ws->transfer_complete)
@@ -128,11 +152,11 @@ void WS2812_Show(WS2812_Instance *ws)
         {
             if ((color_grb >> j) & 0x01) // If bit is 1
             {
-                ws->pwm_data_buffer[pwm_idx++] = WS2812_PWM_HIGH_BIT;
+                ws->pwm_data_buffer[pwm_idx++] = WS2812_PWM_HIGH_BIT; // High pulse for bit 1
             }
             else // If bit is 0
             {
-                ws->pwm_data_buffer[pwm_idx++] = WS2812_PWM_LOW_BIT;
+                ws->pwm_data_buffer[pwm_idx++] = WS2812_PWM_LOW_BIT; // Low pulse for bit 0
             }
         }
     }
@@ -201,3 +225,72 @@ and its interrupt is enabled in the NVIC. The DMA should be in Normal mode, not 
 The timer's PWM period (ARR) and the WS2812_PWM_HIGH_BIT/LOW_BIT values must be
 carefully calculated based on your system clock and the WS2812 datasheet timings.
 */
+
+/**
+ * @brief Implements a brightness-based flowing water light effect on the WS2812 strip.
+ * @param ws Pointer to the WS2812_Instance.
+ * @param r Red component (0-255).
+ * @param g Green component (0-255).
+ * @param b Blue component (0-255).
+ * @param flow_length Number of LEDs to be part of the 'lit' section of the flow.
+ * @param max_brightness Maximum brightness for the lit LEDs (0-255).
+ * @param min_brightness Minimum brightness for the dim LEDs (0-255).
+ * @param delay_ms Delay in milliseconds between each step of the flow.
+ */
+void WS2812_BrightnessFlow(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b,
+                           uint8_t flow_length, uint8_t max_brightness, uint8_t min_brightness,
+                           uint32_t delay_ms)
+{
+    if (!ws || ws->num_leds == 0)
+    {
+        return;
+    }
+
+    // 确保flow_length不大于LED总数
+    if (flow_length >= ws->num_leds)
+    {
+        flow_length = ws->num_leds;
+    }
+
+    // 存储当前动画位置的静态变量
+    static uint16_t current_pos = 0;
+
+    // 为每个LED设置颜色和亮度
+    for (uint16_t i = 0; i < ws->num_leds; ++i)
+    {
+        // 计算当前LED与动画位置的相对位置
+        int16_t distance = (i - current_pos + ws->num_leds) % ws->num_leds;
+
+        // 计算每个LED的亮度，随距离递减
+        uint8_t brightness;
+        if (distance <= ws->num_leds / 2) // 前半部分
+        {
+            brightness = max_brightness - ((max_brightness - min_brightness) * distance) / (ws->num_leds / 2);
+        }
+        else // 后半部分，保持最小亮度
+        {
+            brightness = min_brightness;
+        }
+
+        // 设置LED颜色，应用计算出的亮度
+        WS2812_SetPixelColor(ws, i,
+                             (r * brightness) / 255,
+                             (g * brightness) / 255,
+                             (b * brightness) / 255);
+    }
+
+    // 更新动画位置
+    current_pos = (current_pos + 1) % ws->num_leds;
+
+    // 显示更新后的LED状态
+    WS2812_Show(ws);
+
+    // 延时
+    HAL_Delay(delay_ms);
+
+    // 等待DMA传输完成
+    while (!ws->transfer_complete)
+    {
+        // 可以在这里添加超时处理或在RTOS任务中使用yield
+    }
+}

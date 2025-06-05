@@ -181,7 +181,7 @@ void mahjong_init()
     }
 
     // WS2812初始化
-    // ws2812 = WS2812_Init(&htim3, TIM_CHANNEL_1, &hdma_tim3_ch1_trig, WS2812_LED_NUM);
+    ws2812 = WS2812_Init(&htim3, TIM_CHANNEL_1, &hdma_tim3_ch1_trig, WS2812_LED_NUM);
 }
 
 void mahjong_task()
@@ -236,7 +236,19 @@ void mahjong_task()
     // HAL_GPIO_WritePin(GPIOG, GPIO_PIN_4, GPIO_PIN_RESET);
     // phase = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_2);
     // phase1 = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_4);
-    L298NControl(l298n, MOTOR_FORWARD, MOTOR_FORWARD); // 启动L298N电机驱动板A通道
+    // L298NControl(l298n, MOTOR_FORWARD, MOTOR_FORWARD); // 启动L298N电机驱动板A通道
+
+    // 流水灯特效 - 通过亮度渐变实现
+    static uint32_t last_update = 0;
+    if (HAL_GetTick() - last_update >= 10) // 每10ms更新一次
+    {
+        // 使用蓝色作为主色，通过亮度渐变实现流水灯效果
+        // max_brightness为128表示较柔和的最大亮度
+        // min_brightness为0表示完全关闭
+        // delay为25ms，使动画更流畅
+        WS2812_BrightnessFlow(ws2812, 255, 0, 255, WS2812_LED_NUM, 128, 0, 10);
+        last_update = HAL_GetTick();
+    }
 }
 
 static void Key1Callback(GPIO_Instance *gpio)
