@@ -235,11 +235,9 @@ carefully calculated based on your system clock and the WS2812 datasheet timings
  * @param flow_length Number of LEDs to be part of the 'lit' section of the flow.
  * @param max_brightness Maximum brightness for the lit LEDs (0-255).
  * @param min_brightness Minimum brightness for the dim LEDs (0-255).
- * @param delay_ms Delay in milliseconds between each step of the flow.
  */
-void WS2812_BrightnessFlow(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b,
-                           uint8_t flow_length, uint8_t max_brightness, uint8_t min_brightness,
-                           uint32_t delay_ms)
+void WS2812_WaterFlow(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b,
+                      uint8_t flow_length, uint8_t max_brightness, uint8_t min_brightness)
 {
     if (!ws || ws->num_leds == 0)
     {
@@ -263,9 +261,9 @@ void WS2812_BrightnessFlow(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b,
 
         // 计算每个LED的亮度，随距离递减
         uint8_t brightness;
-        if (distance <= ws->num_leds / 2) // 前半部分
+        if (distance <= flow_length) // 前半部分
         {
-            brightness = max_brightness - ((max_brightness - min_brightness) * distance) / (ws->num_leds / 2);
+            brightness = max_brightness - ((max_brightness - min_brightness) * distance) / flow_length;
         }
         else // 后半部分，保持最小亮度
         {
@@ -284,9 +282,6 @@ void WS2812_BrightnessFlow(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b,
 
     // 显示更新后的LED状态
     WS2812_Show(ws);
-
-    // 延时
-    HAL_Delay(delay_ms);
 
     // 等待DMA传输完成
     while (!ws->transfer_complete)

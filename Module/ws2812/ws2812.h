@@ -109,8 +109,7 @@ void WS2812_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim);
  * @param flow_length Number of LEDs to be part of the 'lit' section of the flow.
  * @param max_brightness Maximum brightness for the lit LEDs (0-255).
  * @param min_brightness Minimum brightness for the dim LEDs (0-255).
- * @param delay_ms Delay in milliseconds between each step of the flow.
  */
-void WS2812_BrightnessFlow(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b, uint8_t flow_length, uint8_t max_brightness, uint8_t min_brightness, uint32_t delay_ms);
+void WS2812_WaterFlow(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b, uint8_t flow_length, uint8_t max_brightness, uint8_t min_brightness);
 
 #endif // !WS2812_H

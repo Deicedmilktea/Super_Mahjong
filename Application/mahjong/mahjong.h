@@ -17,8 +17,6 @@
 #define MOTOR_LID_OPEN 0x0A
 #define MOTOR_LID_CLOSE 0x0B
 
-#define WS2812_LED_NUM 30
-
 #define L298N_MOTOR_PWM 500 // L298N电机PWM值
 
 #define NUM_PLAYERS 4 // 玩家数量
@@ -138,9 +136,17 @@ typedef struct
     PlayerID current_dealer; // 当前庄家的玩家ID
     PlayerID current_player; // 当前行动的玩家ID
     uint8_t wall_tile_count; // 牌墙剩余牌数 (例如初始144张)
+
+    // 牌局阶段
+    GlobalPhase global_phase;
+    DealingSubState dealing_sub_state;
+    JumpingSubState jumping_sub_state;
+    SingleRefillSubState single_refill_sub_state;
+    OverSubState over_sub_state;
 } GlobalGameState;
 
 void mahjong_init();
 void mahjong_task();
+GlobalGameState *get_global_game_state(void);
 
 #endif // !MAHJONG_H

@@ -7,10 +7,13 @@
 #include "cmsis_os.h"
 
 #include "robot.h"
+#include "led.h"
 
 osThreadId robotTaskHandle;
+osThreadId ledTaskHandle;
 
 void StartROBOTTASK(void const *argument);
+void StartLEDTASK(void const *argument);
 
 /**
  * @brief 初始化机器人任务,所有持续运行的任务都在这里初始化
@@ -20,6 +23,9 @@ void OSTaskInit()
 {
     osThreadDef(robottask, StartROBOTTASK, osPriorityNormal, 0, 256);
     robotTaskHandle = osThreadCreate(osThread(robottask), NULL);
+
+    osThreadDef(ledtask, StartLEDTASK, osPriorityNormal, 0, 128);
+    ledTaskHandle = osThreadCreate(osThread(ledtask), NULL);
 }
 
 __attribute__((noreturn)) void StartROBOTTASK(void const *argument)
@@ -34,5 +40,16 @@ __attribute__((noreturn)) void StartROBOTTASK(void const *argument)
         RobotTask();
         // robot_dt = DWT_GetTimeline_ms() - robot_start;
         osDelay(5);
+    }
+}
+
+__attribute__((noreturn)) void StartLEDTASK(void const *argument)
+{
+    LEDInit(); // 初始化LED
+
+    for (;;)
+    {
+        LEDTask();
+        osDelay(10); // 100Hz
     }
 }
