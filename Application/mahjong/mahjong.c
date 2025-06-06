@@ -19,6 +19,7 @@ static uint8_t phase, phase1 = 1;                                               
 static uint8_t dealStep, jumpStep, refillStep = 0;                                                                 // 发牌和跳步
 
 static GlobalGameState global_game;
+static AI_Send_s ai_send_data; // AI发送数据
 
 static void Key1Callback(GPIO_Instance *gpio);
 static void Key2Callback(GPIO_Instance *gpio);
@@ -184,49 +185,49 @@ void mahjong_init()
 
 void mahjong_task()
 {
-    // // 确定所属阶段
-    // switch (global_game.global_phase)
-    // {
-    // case PHASE_IDLE:
-    //     phase_idle_task();
-    //     break;
+    // 确定所属阶段
+    switch (global_game.global_phase)
+    {
+    case PHASE_IDLE:
+        phase_idle_task();
+        break;
 
-    // case PHASE_DEALING:
-    //     phase_dealing_task();
-    //     break;
+    case PHASE_DEALING:
+        phase_dealing_task();
+        break;
 
-    // case PHASE_JUMPING:
-    //     phase_jumping_task();
-    //     break;
+    case PHASE_JUMPING:
+        phase_jumping_task();
+        break;
 
-    // case PHASE_SINGLE_REFILL:
-    //     phase_single_refill_task();
-    //     break;
+    case PHASE_SINGLE_REFILL:
+        phase_single_refill_task();
+        break;
 
-    // case PHASE_OVER:
-    //     phase_over_task();
+    case PHASE_OVER:
+        phase_over_task();
 
-    // case PHASE_ERROR:
-    //     phase_error_task();
-    //     break;
+    case PHASE_ERROR:
+        phase_error_task();
+        break;
 
-    // default:
-    //     break;
-    // }
+    default:
+        break;
+    }
 
-    // if (phase)
-    // {
-    //     driver->mahjong_phase = 1;
-    //     phase = 0;
-    // }
+    if (phase)
+    {
+        driver->mahjong_phase = 1;
+        phase = 0;
+    }
 
-    // // if (key2_count % 2 == 1 || driver->callback_flag == MOTOR_CALLBACK_NONE) // 回调异常断电
-    // if (driver->callback_flag == MOTOR_CALLBACK_NONE) // 回调异常断电
-    //     driver->stop_flag = MOTOR_STOP;
-    // else
-    //     driver->stop_flag = MOTOR_ENABLED;
+    // if (key2_count % 2 == 1 || driver->callback_flag == MOTOR_CALLBACK_NONE) // 回调异常断电
+    if (driver->callback_flag == MOTOR_CALLBACK_NONE) // 回调异常断电
+        driver->stop_flag = MOTOR_FLAG_STOP;
+    else
+        driver->stop_flag = MOTOR_FLAG_ENABLED;
 
-    // // MotorControl(driver);
+    MotorControl(driver);
 
     // char *pwm_cmd = "$pwm:1000,0,0,0#";
     // USARTSend(driver->usart, (uint8_t *)pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);

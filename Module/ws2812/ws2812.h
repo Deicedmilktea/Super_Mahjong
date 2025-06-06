@@ -98,18 +98,33 @@ void WS2812_SetBrightness(WS2812_Instance *ws, uint8_t brightness);
 void WS2812_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim);
 
 /**
- * @brief Implements a flowing water light effect on the WS2812 strip.
+ * @brief Implements a flowing water light effect on a specified section of the WS2812 strip.
  * @param ws Pointer to the WS2812_Instance.
  * @param r Red component (0-255) for the flowing light.
  * @param g Green component (0-255) for the flowing light.
  * @param b Blue component (0-255) for the flowing light.
- * @param r Red component (0-255) for the base color.
- * @param g Green component (0-255) for the base color.
- * @param b Blue component (0-255) for the base color.
- * @param flow_length Number of LEDs to be part of the 'lit' section of the flow.
+ * @param start_pos Starting position of the effect (inclusive).
+ * @param end_pos Ending position of the effect (inclusive).
  * @param max_brightness Maximum brightness for the lit LEDs (0-255).
  * @param min_brightness Minimum brightness for the dim LEDs (0-255).
  */
-void WS2812_WaterFlow(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b, uint8_t flow_length, uint8_t max_brightness, uint8_t min_brightness);
+void WS2812_WaterFlow(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b,
+                      uint16_t start_pos, uint16_t end_pos, uint8_t max_brightness, uint8_t min_brightness);
+
+/**
+ * @brief Implements a breathing light effect on a specified section of the WS2812 strip.
+ * @param ws Pointer to the WS2812_Instance.
+ * @param r Red component (0-255).
+ * @param g Green component (0-255).
+ * @param b Blue component (0-255).
+ * @param start_pos Starting position of the effect (inclusive).
+ * @param end_pos Ending position of the effect (inclusive).
+ * @param speed Breathing speed (1-255), higher value means faster breathing.
+ * @param max_brightness Maximum brightness for breathing (0-255).
+ * @param min_brightness Minimum brightness for breathing (0-255).
+ */
+void WS2812_Breathing(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b,
+                      uint16_t start_pos, uint16_t end_pos,
+                      uint8_t speed, uint8_t max_brightness, uint8_t min_brightness);
 
 #endif // !WS2812_H

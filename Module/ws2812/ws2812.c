@@ -232,38 +232,47 @@ carefully calculated based on your system clock and the WS2812 datasheet timings
  * @param r Red component (0-255).
  * @param g Green component (0-255).
  * @param b Blue component (0-255).
- * @param flow_length Number of LEDs to be part of the 'lit' section of the flow.
+ * @param start_pos Starting position of the effect (inclusive).
+ * @param end_pos Ending position of the effect (inclusive).
  * @param max_brightness Maximum brightness for the lit LEDs (0-255).
  * @param min_brightness Minimum brightness for the dim LEDs (0-255).
  */
 void WS2812_WaterFlow(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b,
-                      uint8_t flow_length, uint8_t max_brightness, uint8_t min_brightness)
+                      uint16_t start_pos, uint16_t end_pos, uint8_t max_brightness, uint8_t min_brightness)
 {
     if (!ws || ws->num_leds == 0)
     {
         return;
     }
 
-    // 确保flow_length不大于LED总数
-    if (flow_length >= ws->num_leds)
+    // 验证起始和结束位置的有效性
+    if (start_pos >= ws->num_leds || end_pos >= ws->num_leds || start_pos > end_pos)
     {
-        flow_length = ws->num_leds;
+        return;
     }
+
+    // 计算有效LED段的长度
+    uint16_t segment_length = end_pos - start_pos + 1;
 
     // 存储当前动画位置的静态变量
     static uint16_t current_pos = 0;
 
-    // 为每个LED设置颜色和亮度
-    for (uint16_t i = 0; i < ws->num_leds; ++i)
+    // 清除所有LED
+    WS2812_Clear(ws);
+
+    // 为指定范围内的LED设置颜色和亮度
+    for (uint16_t i = start_pos; i <= end_pos; ++i)
     {
         // 计算当前LED与动画位置的相对位置
-        int16_t distance = (i - current_pos + ws->num_leds) % ws->num_leds;
+        int16_t normalized_pos = (current_pos - start_pos + segment_length) % segment_length;
+        int16_t relative_pos = (i - start_pos + segment_length) % segment_length;
+        int16_t distance = (relative_pos - normalized_pos + segment_length) % segment_length;
 
         // 计算每个LED的亮度，随距离递减
         uint8_t brightness;
-        if (distance <= flow_length) // 前半部分
+        if (distance <= segment_length / 2) // 前半部分
         {
-            brightness = max_brightness - ((max_brightness - min_brightness) * distance) / flow_length;
+            brightness = max_brightness - ((max_brightness - min_brightness) * distance) / (segment_length / 2);
         }
         else // 后半部分，保持最小亮度
         {
@@ -278,7 +287,80 @@ void WS2812_WaterFlow(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b,
     }
 
     // 更新动画位置
-    current_pos = (current_pos + 1) % ws->num_leds;
+    current_pos = (current_pos + 1) % segment_length;
+
+    // 显示更新后的LED状态
+    WS2812_Show(ws);
+
+    // 等待DMA传输完成
+    while (!ws->transfer_complete)
+    {
+        // 可以在这里添加超时处理或在RTOS任务中使用yield
+    }
+}
+
+/**
+ * @brief 在指定范围内实现呼吸灯效果
+ */
+void WS2812_Breathing(WS2812_Instance *ws, uint8_t r, uint8_t g, uint8_t b,
+                      uint16_t start_pos, uint16_t end_pos,
+                      uint8_t speed, uint8_t max_brightness, uint8_t min_brightness)
+{
+    if (!ws || ws->num_leds == 0)
+    {
+        return;
+    }
+
+    // 验证起始和结束位置的有效性
+    if (start_pos >= ws->num_leds || end_pos >= ws->num_leds || start_pos > end_pos)
+    {
+        return;
+    }
+
+    // 确保亮度范围有效
+    if (max_brightness < min_brightness)
+    {
+        uint8_t temp = max_brightness;
+        max_brightness = min_brightness;
+        min_brightness = temp;
+    }
+
+    // 确保速度不为0
+    if (speed == 0)
+    {
+        speed = 1;
+    }
+
+    // 使用静态变量记录呼吸过程
+    static uint8_t breath_value = 0;
+    static int8_t breath_direction = 1; // 1表示变亮，-1表示变暗
+
+    // 清除所有LED
+    WS2812_Clear(ws);
+
+    // 计算当前呼吸值
+    breath_value += breath_direction * speed;
+
+    // 检查是否需要改变方向
+    if (breath_value >= max_brightness)
+    {
+        breath_value = max_brightness;
+        breath_direction = -1;
+    }
+    else if (breath_value <= min_brightness)
+    {
+        breath_value = min_brightness;
+        breath_direction = 1;
+    }
+
+    // 设置指定范围内LED的颜色和亮度
+    for (uint16_t i = start_pos; i <= end_pos; i++)
+    {
+        WS2812_SetPixelColor(ws, i,
+                             (r * breath_value) / 255,
+                             (g * breath_value) / 255,
+                             (b * breath_value) / 255);
+    }
 
     // 显示更新后的LED状态
     WS2812_Show(ws);
