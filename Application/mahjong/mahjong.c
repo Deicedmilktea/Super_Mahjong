@@ -236,6 +236,7 @@ void mahjong_task()
     // phase = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_2);
     // phase1 = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_4);
     // L298NControl(l298n, MOTOR_FORWARD, MOTOR_FORWARD); // 启动L298N电机驱动板A通道
+    HAL_UART_Transmit(&huart1, (uint8_t *)"hello\r\n", 7, 100); // 测试串口通信
 }
 
 static void Key1Callback(GPIO_Instance *gpio)

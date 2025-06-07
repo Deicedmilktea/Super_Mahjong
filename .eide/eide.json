@@ -92,7 +92,8 @@
           "Module/ai",
           "Module/l298n",
           "Module/rfid",
-          "Application/led"
+          "Application/led",
+          "Module/daemon"
         ],
         "libList": [
           "Middlewares/ST/ARM/DSP/Lib"

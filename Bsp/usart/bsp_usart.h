@@ -3,6 +3,7 @@
 
 #include "stdlib.h"
 #include "usart.h"
+#include "daemon.h"
 
 #define USART_DEVICE_MAX_NUM 3  // 支持的最大USART设备数量
 #define USART_RXBUFF_LIMIT 255u // 如果协议需要更大的buff,请修改这里
@@ -32,6 +33,7 @@ struct USART_Instance
     UART_HandleTypeDef *usart_handle;                // 实例对应的usart_handle
     void (*usart_module_callback)(USART_Instance *); // 解析收到的数据的回调函数
     void *id;                                        // 实例的唯一标识符,可以是模块的id或其他信息,如果不需要可以设置为NULL
+    Daemon_Instance *daemon;                         // 实例对应的守护进程,用于监控模块是否在线
 };
 
 // 串口初始化配置结构体
@@ -41,6 +43,7 @@ typedef struct
     UART_HandleTypeDef *usart_handle;                // 实例对应的usart_handle
     void (*usart_module_callback)(USART_Instance *); // 解析收到的数据的回调函数
     void *id;                                        // 实例的唯一标识符,可以是模块的id或其他信息,如果不需要可以设置为NULL
+    Daemon_Init_Config_s daemon_config;              // 实例对应的守护进程初始化配置,用于监控模块是否在线
 } USART_Init_Config_s;
 
 /**
@@ -79,5 +82,10 @@ void USARTSend(USART_Instance *_instance, uint8_t *send_buf, uint16_t send_size,
  * @return uint8_t ready 1, busy 0
  */
 uint8_t USARTIsReady(USART_Instance *_instance);
+
+/**
+ *  @brief 串口离线回调函数
+ */
+void USARTOfflineCallback(USART_Instance *_instance);
 
 #endif // BSP_USART_H

@@ -8,12 +8,15 @@
 
 #include "robot.h"
 #include "led.h"
+#include "daemon.h"
 
 osThreadId robotTaskHandle;
 osThreadId ledTaskHandle;
+osThreadId daemonTaskHandle;
 
 void StartROBOTTASK(void const *argument);
 void StartLEDTASK(void const *argument);
+void StartDAEMONTASK(void const *argument);
 
 /**
  * @brief 初始化机器人任务,所有持续运行的任务都在这里初始化
@@ -26,6 +29,9 @@ void OSTaskInit()
 
     osThreadDef(ledtask, StartLEDTASK, osPriorityNormal, 0, 128);
     ledTaskHandle = osThreadCreate(osThread(ledtask), NULL);
+
+    osThreadDef(daemontask, StartDAEMONTASK, osPriorityNormal, 0, 128);
+    daemonTaskHandle = osThreadCreate(osThread(daemontask), NULL);
 }
 
 __attribute__((noreturn)) void StartROBOTTASK(void const *argument)
@@ -51,5 +57,19 @@ __attribute__((noreturn)) void StartLEDTASK(void const *argument)
     {
         LEDTask();
         osDelay(10); // 100Hz
+    }
+}
+
+__attribute__((noreturn)) void StartDAEMONTASK(void const *argument)
+{
+    // static float daemon_dt;
+    // static float daemon_start;
+    for (;;)
+    {
+        // 100Hz
+        // daemon_start = DWT_GetTimeline_ms();
+        DaemonTask();
+        // daemon_dt = DWT_GetTimeline_ms() - daemon_start;
+        osDelay(10);
     }
 }

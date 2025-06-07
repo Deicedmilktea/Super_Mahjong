@@ -41,6 +41,11 @@ USART_Instance *USARTRegister(USART_Init_Config_s *init_config)
     usart_instances[idx++] = usart;
     USARTServiceInit(usart);
 
+    init_config->daemon_config.reload_count = 50;               // 重载值,单位为ms,即每50ms检查一次模块是否在线
+    init_config->daemon_config.callback = (void (*)(void *))USARTOfflineCallback; // 串口离线回调函数
+    init_config->daemon_config.owner_id = usart;                // 将usart实例的地址作为owner_id
+    usart->daemon = DaemonRegister(&init_config->daemon_config);
+
     return usart;
 }
 
@@ -105,6 +110,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
             {
                 usart_instances[i]->usart_module_callback(usart_instances[i]);
                 memset(usart_instances[i]->recv_buff, 0, Size); // 接收结束后清空buffer,对于变长数据是必要的
+                DaemonReload(usart_instances[i]->daemon);       // 重载守护进程计数器
             }
 
             // 重启DMA接收
@@ -133,4 +139,9 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
             return;
         }
     }
+}
+
+void USARTOfflineCallback(USART_Instance *_instance)
+{
+    USARTServiceInit(_instance); // 重启串口接收服务
 }

@@ -3,6 +3,7 @@
 
 #include "bsp_usart.h"
 #include "controller.h"
+#include "daemon.h"
 
 #define MOTOR_CNT 4      // 电机数量,目前只支持4个电机
 #define DRIVER_MAX_NUM 1 // 驱动板数量,目前只支持1个驱动板
@@ -165,6 +166,7 @@ typedef struct
     uint8_t mahjong_phase;
     Motor_Instance *motor[MOTOR_CNT];    // 电机实例数组,最多4个电机
     USART_Instance *usart;               // 电机实例对应的串口实例
+    Daemon_Instance *daemon;             // 驱动板实例对应的守护进程实例
     Motor_Working_Type_e stop_flag;      // 启停标志
     Motor_Callback_Flag_e callback_flag; // 接收信号标志
 } Driver_Instance;
@@ -175,7 +177,8 @@ typedef struct
 typedef struct
 {
     Motor_Instance *motor[MOTOR_CNT];
-    USART_Init_Config_s usart_config; // 驱动板实例对应的串口实例
+    USART_Init_Config_s usart_config;   // 驱动板实例对应的串口实例
+    Daemon_Init_Config_s daemon_config; // 驱动板实例对应的守护进程实例
 } Driver_Init_Config_s;
 
 Driver_Instance *DriverInit(Driver_Init_Config_s *init_config);
