@@ -5,6 +5,7 @@
 #include "rfid.h"
 #include "ai.h"
 #include "l298n.h"
+#include "crc.h"
 
 static Driver_Instance *driver;                                                        // 驱动板实例
 static Motor_Instance *motor_push_1, *motor_push_2, *motor_elevator, *motor_turntable; // 电机实例
@@ -181,6 +182,15 @@ void mahjong_init()
     global_game.jumping_sub_state = JUMP_INIT;
     global_game.single_refill_sub_state = REFILL_INIT;
     global_game.over_sub_state = OVER_INIT;
+
+    ai_send_data.head = 0xAA;
+    ai_send_data.current_phase = PHASE_IDLE; // 发牌阶段
+    ai_send_data.player = PLAYER_ID_EAST;    // 玩家编号 (东)
+    ai_send_data.action = ACTION_DRAW;       // 玩家操作类型 (杠)
+    ai_send_data.tile_type = TILE_TYPE_WAN;  // 牌类型 (万/条/筒/字)
+    ai_send_data.tile_value = 0;             // 牌面值
+    ai_send_data.check_sum = 0;              // 校验和
+    ai_send_data.tail = 0x55;                // 数据尾标识符
 }
 
 void mahjong_task()
@@ -236,7 +246,25 @@ void mahjong_task()
     // phase = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_2);
     // phase1 = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_4);
     // L298NControl(l298n, MOTOR_FORWARD, MOTOR_FORWARD); // 启动L298N电机驱动板A通道
-    HAL_UART_Transmit(&huart1, (uint8_t *)"hello\r\n", 7, 100); // 测试串口通信
+    // HAL_UART_Transmit(&huart1, (uint8_t *)"hello\r\n", 7, 100); // 测试串口通信
+
+    // AI_Send_s ai_send_data = {
+    //     .head = 0xAA,
+    //     .current_phase = PHASE_SINGLE_REFILL,                                      // 发牌阶段
+    //     .player = PLAYER_ID_SOUTH,                                                 // 玩家编号 (东)
+    //     .action = ACTION_DISCARD,                                                  // 玩家操作类型 (杠)
+    //     .tile_type = TILE_TYPE_TIAO,                                               // 牌类型 (万/条/筒/字)
+    //     .tile_value = 3,                                                           // 牌面值
+    //     .check_sum = CRC16_CCITT((uint8_t *)&ai_send_data, sizeof(AI_Send_s) - 2), // 校验和
+    //     .tail = 0x55,                                                              // 数据尾标识符
+    // };
+    ai_send_data.current_phase = PHASE_SINGLE_REFILL;                                      // 发牌阶段
+    ai_send_data.player = PLAYER_ID_SOUTH;                                                 // 玩家编号 (东)
+    ai_send_data.action = ACTION_DISCARD;                                                  // 玩家操作类型 (杠)
+    ai_send_data.tile_type = TILE_TYPE_TIAO;                                               // 牌类型 (万/条/筒/字)
+    ai_send_data.tile_value = 3;                                                           // 牌面值
+    ai_send_data.check_sum = CRC16_CCITT((uint8_t *)&ai_send_data, sizeof(AI_Send_s) - 3); // 计算校验和
+    AISendData(ai, &ai_send_data);                                                         // 发送AI数据
 }
 
 static void Key1Callback(GPIO_Instance *gpio)

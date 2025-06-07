@@ -6,9 +6,10 @@
 #define AI_RECV_HEADER 0xA7 // AI接收数据头标识符
 #define AI_SEND_HEADER 0xA8 // AI发送数据头标识符
 #define AI_SEND_TAIL 0xA9   // AI发送数据尾标识符
-#define AI_RECV_SIZE 3u     // AI接收数据大小
+#define AI_RECV_SIZE 9u     // AI接收数据大小
 #define AI_SEND_SIZE 9u     // AI发送数据大小
 
+#pragma pack(1)
 typedef struct
 {
     USART_Init_Config_s usart_config; // USART初始化配置
@@ -39,6 +40,7 @@ typedef struct
     AI_Receive_s ai_recv;  // AI接收数据
     AI_Send_s ai_send;     // AI发送数据
 } AI_Instance;
+#pragma pack()
 
 AI_Instance *AIInit(AI_Init_Config_s *init_config);
 void AICallback(USART_Instance *_usart_instance);

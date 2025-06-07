@@ -93,7 +93,8 @@
           "Module/l298n",
           "Module/rfid",
           "Application/led",
-          "Module/daemon"
+          "Module/daemon",
+          "Module/crc"
         ],
         "libList": [
           "Middlewares/ST/ARM/DSP/Lib"
