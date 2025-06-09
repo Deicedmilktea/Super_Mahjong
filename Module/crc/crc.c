@@ -37,9 +37,6 @@ uint16_t CRC16_CCITT(const uint8_t *data, size_t length)
     }
 
     return crc;
-
-    // // 转换为大端格式（高位在前）
-    // return ((crc << 8) & 0xFF00) | ((crc >> 8) & 0x00FF);
 }
 
 /**

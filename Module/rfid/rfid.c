@@ -103,7 +103,8 @@ RFID_Instance *RFIDInit(RFID_Init_Config_s *init_config)
     }
     memset(rfid_instance, 0, sizeof(RFID_Instance));
 
-    RFIDQueueInit(&rfid_instance->draw_tile);
+    RFIDQueueInit(&rfid_instance->draw_tile_1);
+    RFIDQueueInit(&rfid_instance->draw_tile_2);
     RFIDQueueInit(&rfid_instance->discard_tile);
 
     rfid_instance->usart = USARTRegister(&init_config->usart_config);
@@ -151,7 +152,19 @@ void RFIDCallback(USART_Instance *_usart_instance)
             Tile tile;
             tile.type = received_data.type;
             tile.value = received_data.value;
-            RFIDEnqueue(&rfid_instance->draw_tile, tile);
+            if (received_data.channel == 1)
+            {
+                RFIDEnqueue(&rfid_instance->draw_tile_1, tile);
+            }
+            else if (received_data.channel == 2)
+            {
+                RFIDEnqueue(&rfid_instance->draw_tile_2, tile);
+            }
+            else
+            {
+                // Invalid channel, handle error if necessary
+                return;
+            }
             last_draw_index = received_data.index;
         }
         break;

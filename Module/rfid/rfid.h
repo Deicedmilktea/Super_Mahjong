@@ -7,6 +7,7 @@
 #define RFID_BUFFER_SIZE 20 // RFID数据缓冲区大小
 #define RFID_DATA_HEAD 0xA5 // RFID接收数据头标识符
 
+#pragma pack(1)
 typedef struct
 {
     int8_t head;                  // 队列头索引
@@ -18,7 +19,8 @@ typedef struct
 typedef struct
 {
     USART_Instance *usart;  // USART实例
-    RFIDQueue draw_tile;    // 摸牌
+    RFIDQueue draw_tile_1;  // 摸牌通道1
+    RFIDQueue draw_tile_2;  // 摸牌通道2
     RFIDQueue discard_tile; // 弃牌
 } RFID_Instance;
 
@@ -29,12 +31,15 @@ typedef struct
 
 typedef struct
 {
-    uint8_t head;   // 队列头索引 0xA5
-    uint8_t action; // 玩家操作类型
-    uint16_t index; // 牌的索引 (例如摸牌或弃牌的索引)
-    uint8_t type;   // 牌类型 (万/条/筒/字)
-    uint8_t value;  // 牌面值
+    uint8_t head;       // 队列头索引 0xA5
+    uint8_t action;     // 玩家操作类型
+    uint8_t channel;    // 通道 (1/2)
+    uint16_t index;     // 牌的索引 (例如摸牌或弃牌的索引)
+    uint8_t type;       // 牌类型 (万/条/筒/字)
+    uint8_t value;      // 牌面值
+    uint16_t check_sum; // 校验和 crc16 CCITT
 } RFID_Receive_Data_s;
+#pragma pack()
 
 RFID_Instance *RFIDInit(RFID_Init_Config_s *init_config);
 void RFIDCallback(USART_Instance *_usart_instance);

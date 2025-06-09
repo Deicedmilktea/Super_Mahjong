@@ -3,16 +3,20 @@
 
 #include <stdint.h>
 
-#define MOTOR_CONVEYOR_1_START 0x01
-#define MOTOR_CONVEYOR_1_STOP 0x02
-#define MOTOR_CONVEYOR_2_START 0x03
-#define MOTOR_CONVEYOR_2_STOP 0x04
-#define MOTOR_TURNTABLE_START 0x05
-#define MOTOR_TURNTABLE_STOP 0x06
+#define ELEVATOR_BG_ENCODER 0
+#define ELEVATOR_B1_ENCODER 0
+#define ELEVATOR_B2_ENCODER 0
+#define PUSH_1_OUT_ENCODER 0
+#define PUSH_1_BACK_ENCODER 0
+#define PUSH_2_OUT_ENCODER 0
+#define PUSH_2_BACK_ENCODER 0
 
-#define MOTOR_ELEVATOR_BG 0x07
-#define MOTOR_ELEVATOR_B1 0x08
-#define MOTOR_ELEVATOR_B2 0x09
+#define TURNTABLE_START_PWM 1000  // 转盘启动PWM值
+#define TURNTABLE_STOP_PWM 0      // 转盘停止PWM值
+#define CONVEYOR_1_START_PWM 1000 // 传送带1启动PWM值
+#define CONVEYOR_1_STOP_PWM 0     // 传送带1停止PWM值
+#define CONVEYOR_2_START_PWM 1000 // 传送带2启动PWM值
+#define CONVEYOR_2_STOP_PWM 0     // 传送带2停止PWM值
 
 #define MOTOR_LID_OPEN 0x0A
 #define MOTOR_LID_CLOSE 0x0B
@@ -84,6 +88,15 @@ typedef enum
     OVER_LID_CLOSE_WAIT_COMPLETE, // 等待托盘上升完成
 } OverSubState;
 
+/* 电机ID定义 */
+typedef enum
+{
+    MOTOR_PUSH_1,
+    MOTOR_PUSH_2,
+    MOTOR_ELEVATOR,
+    MOTOR_TURNTABLE,
+} MotorID;
+
 /* 对牌操作的定义 */
 typedef enum
 {
@@ -136,6 +149,7 @@ typedef struct
     PlayerID current_dealer; // 当前庄家的玩家ID
     PlayerID current_player; // 当前行动的玩家ID
     uint8_t wall_tile_count; // 牌墙剩余牌数 (例如初始144张)
+    uint16_t index;          // 当前操作数量索引
 
     // 牌局阶段
     GlobalPhase global_phase;
@@ -147,6 +161,6 @@ typedef struct
 
 void mahjong_init();
 void mahjong_task();
-GlobalGameState *get_global_game_state(void);
+GlobalGameState *get_global_game_state();
 
 #endif // !MAHJONG_H

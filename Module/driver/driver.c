@@ -163,6 +163,11 @@ void MotorControl(Driver_Instance *driver)
             pid_ref = PIDCalculate(&motor_controller->angle_PID, pid_measure, pid_ref);
         }
 
+        // 此处为了方便，直接用作pwm输出的
+        if ((motor_setting->close_loop_type & SPEED_LOOP) && (motor_setting->outer_loop_type == SPEED_LOOP))
+        {
+        }
+
         // // 计算速度环,(外层闭环为速度或位置)且(启用速度环)时会计算速度环
         // if ((motor_setting->close_loop_type & SPEED_LOOP) && (motor_setting->outer_loop_type & (ANGLE_LOOP | SPEED_LOOP)))
         // {
@@ -214,4 +219,17 @@ void MotorControl(Driver_Instance *driver)
         snprintf(send_buf, sizeof(send_buf), "$pwm:%d,%d,%d,%d#", set[0], set[1], set[2], set[3]);
         USARTSend(driver->usart, (uint8_t *)send_buf, strlen(send_buf), USART_TRANSFER_BLOCKING);
     }
+}
+
+/**
+ * @brief 判断电机是否到达指定位置
+ * @param motor 电机实例
+ * @param tolerance 允许的误差范围
+ */
+uint8_t MotorIsAtPosition(Motor_Instance *motor, float tolerance)
+{
+    if (abs(motor->motor_controller.pid_ref - motor->measure.total_ecd) <= tolerance)
+        return 1; // 到达指定位置
+    else
+        return 0; // 未到达指定位置
 }

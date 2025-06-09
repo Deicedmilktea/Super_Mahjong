@@ -41,9 +41,9 @@ USART_Instance *USARTRegister(USART_Init_Config_s *init_config)
     usart_instances[idx++] = usart;
     USARTServiceInit(usart);
 
-    init_config->daemon_config.reload_count = 50;               // 重载值,单位为ms,即每50ms检查一次模块是否在线
+    init_config->daemon_config.reload_count = 50;                                 // 重载值,单位为ms,即每50ms检查一次模块是否在线
     init_config->daemon_config.callback = (void (*)(void *))USARTOfflineCallback; // 串口离线回调函数
-    init_config->daemon_config.owner_id = usart;                // 将usart实例的地址作为owner_id
+    init_config->daemon_config.owner_id = usart;                                  // 将usart实例的地址作为owner_id
     usart->daemon = DaemonRegister(&init_config->daemon_config);
 
     return usart;

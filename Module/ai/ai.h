@@ -6,7 +6,7 @@
 #define AI_RECV_HEADER 0xA7 // AI接收数据头标识符
 #define AI_SEND_HEADER 0xA8 // AI发送数据头标识符
 #define AI_SEND_TAIL 0xA9   // AI发送数据尾标识符
-#define AI_RECV_SIZE 9u     // AI接收数据大小
+#define AI_RECV_SIZE 4u     // AI接收数据大小
 #define AI_SEND_SIZE 9u     // AI发送数据大小
 
 #pragma pack(1)
@@ -18,6 +18,7 @@ typedef struct
 typedef struct
 {
     uint8_t head;       // 数据头标识符
+    uint8_t index;      // 操作数量索引
     uint8_t tile_type;  // 牌类型 (万/条/筒/字)
     uint8_t tile_value; // 牌面值
 } AI_Receive_s;
@@ -25,6 +26,7 @@ typedef struct
 typedef struct
 {
     uint8_t head;          // 数据头标识符
+    uint16_t index;        // 操作数量索引
     uint8_t current_phase; // 牌局进行阶段
     uint8_t player;        // 玩家编号
     uint8_t action;        // 玩家操作类型

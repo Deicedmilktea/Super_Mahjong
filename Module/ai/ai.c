@@ -17,10 +17,6 @@ AI_Instance *AIInit(AI_Init_Config_s *init_config)
     }
 
     AI_Instance *ai_instance = (AI_Instance *)malloc(sizeof(AI_Instance));
-    if (!ai_instance)
-    {
-        return NULL; // Malloc failed
-    }
     memset(ai_instance, 0, sizeof(AI_Instance));
 
     ai_instance->usart = USARTRegister(&init_config->usart_config);

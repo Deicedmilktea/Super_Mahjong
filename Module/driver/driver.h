@@ -187,4 +187,11 @@ Motor_Instance *MotorRegister(Motor_Init_Config_s *init_config);
 void MotorSetRef(Motor_Instance *motor_instance, float ref);
 void MotorControl(Driver_Instance *driver);
 
+/**
+ * @brief 判断电机是否到达指定位置
+ * @param motor 电机实例
+ * @param tolerance 允许的误差范围
+ */
+uint8_t MotorIsAtPosition(Motor_Instance *motor, float tolerance);
+
 #endif // !DRIVER_H
