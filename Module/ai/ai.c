@@ -1,4 +1,5 @@
 #include "ai.h"
+#include "crc.h"
 
 #define MAX_AI_INSTANCES 3 // Maximum number of AI modules
 static AI_Instance *ai_instances[MAX_AI_INSTANCES] = {NULL};
@@ -45,6 +46,18 @@ void AICallback(USART_Instance *_usart_instance)
     AI_Instance *ai_instance = (AI_Instance *)_usart_instance->id;
     uint8_t *rx_buf = ai_instance->usart->recv_buff;
     uint16_t rx_len = ai_instance->usart->data_len;
+
+    if (rx_len < sizeof(AI_Receive_s) || rx_buf[0] != AI_RECV_HEADER || rx_buf[rx_len - 1] != CRC16_CCITT(rx_buf, rx_len - 2))
+    {
+        return; // Invalid data length or header
+    }
+
+    ai_instance->ai_recv = *(AI_Receive_s *)rx_buf;
+    if (ai_instance->ai_recv.index != ai_instance->last_index)
+    {
+        ai_instance->is_recv = 1;                              // Set received flag
+        ai_instance->last_index = ai_instance->ai_recv.index; // Update last index
+    }
 }
 
 /**

@@ -44,10 +44,12 @@ typedef enum
     DEAL_TRAY_DOWN_B1_WAIT_COMPLETE, // 等待托盘下降完成
     DEAL_LAYER1_CONV_START,          // 第1层，传送带启动
     DEAL_LAYER1_CONV_WAIT_TILE,      // 第1层，等待传送带的牌
+    DEAL_PUSH_OUT_1_WAIT_COMPLETE,   // 第一次等待推牌电机向外推完成
     DEAL_TRAY_DOWN_B2_START,         // 托盘下降启动
     DEAL_TRAY_DOWN_B2_WAIT_COMPLETE, // 等待托盘下降完成
     DEAL_LAYER2_CONV_START,          // 第2层，传送带启动
     DEAL_LAYER2_CONV_WAIT_TILE,      // 第2层，等待传送带的牌
+    DEAL_PUSH_OUT_2_WAIT_COMPLETE,   // 第二次等待推牌电机向外推完成
     DEAL_TRAY_UP_START,              // 托盘上升启动
     DEAL_TRAY_UP_WAIT_COMPLETE,      // 等待托盘上升完成
     DEAL_WAIT_TILE_CAUGHT,           // 等待牌被接走
@@ -61,6 +63,7 @@ typedef enum
     JUMP_TRAY_DOWN_B1_WAIT_COMPLETE, // 等待托盘下降完成
     JUMP_CONV_START,                 // 第1层，传送带启动
     JUMP_CONV_WAIT_TILE,             // 第1层，等待传送带的牌
+    JUMP_PUSH_OUT_WAIT_COMPLETE,     // 等待推牌电机向外推完成
     JUMP_TRAY_UP_START,              // 托盘上升启动
     JUMP_TRAY_UP_WAIT_COMPLETE,      // 等待托盘上升完成
     JUMP_WAIT_TILE_CAUGHT,           // 等待牌被接走
@@ -74,6 +77,7 @@ typedef enum
     REFILL_TRAY_DOWN_B1_WAIT_COMPLETE, // 等待托盘下降完成
     REFILL_CONV_START,                 // 第1层，传送带启动
     REFILL_CONV_WAIT_TILE,             // 第1层，等待传送带的牌
+    REFILL_PUSH_OUT_WAIT_COMPLETE,     // 等待推牌电机向外推完成
     REFILL_TRAY_UP_START,              // 托盘上升启动
     REFILL_TRAY_UP_WAIT_COMPLETE,      // 等待托盘上升完成
     REFILL_WAIT_TILE_CAUGHT,           // 等待牌被接走
@@ -147,6 +151,7 @@ typedef struct
 {
     PlayerInfo players[NUM_PLAYERS];
     PlayerID current_dealer; // 当前庄家的玩家ID
+    PlayerID ai;             // AI玩家的ID
     PlayerID current_player; // 当前行动的玩家ID
     uint8_t wall_tile_count; // 牌墙剩余牌数 (例如初始144张)
     uint16_t index;          // 当前操作数量索引

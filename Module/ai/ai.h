@@ -4,8 +4,8 @@
 #include "bsp_usart.h"
 
 #define AI_RECV_HEADER 0xA7 // AI接收数据头标识符
-#define AI_SEND_HEADER 0xA8 // AI发送数据头标识符
-#define AI_SEND_TAIL 0xA9   // AI发送数据尾标识符
+#define AI_SEND_HEADER 0xAA // AI发送数据头标识符
+#define AI_SEND_TAIL 0x55   // AI发送数据尾标识符
 #define AI_RECV_SIZE 4u     // AI接收数据大小
 #define AI_SEND_SIZE 9u     // AI发送数据大小
 
@@ -21,6 +21,7 @@ typedef struct
     uint8_t index;      // 操作数量索引
     uint8_t tile_type;  // 牌类型 (万/条/筒/字)
     uint8_t tile_value; // 牌面值
+    uint16_t check_sum; // 校验和 crc16_ccitt
 } AI_Receive_s;
 
 typedef struct
@@ -32,7 +33,7 @@ typedef struct
     uint8_t action;        // 玩家操作类型
     uint8_t tile_type;     // 牌类型 (万/条/筒/字)
     uint8_t tile_value;    // 牌面值
-    uint16_t check_sum;    // 校验和
+    uint16_t check_sum;    // 校验和 crc16_ccitt
     uint8_t tail;          // 数据尾标识符
 } AI_Send_s;
 
@@ -41,6 +42,8 @@ typedef struct
     USART_Instance *usart; // AI模块对应的USART实例
     AI_Receive_s ai_recv;  // AI接收数据
     AI_Send_s ai_send;     // AI发送数据
+    uint8_t is_recv;       // 是否接收到数据标志位
+    uint8_t last_index;    // 上一个接收到的数量索引
 } AI_Instance;
 #pragma pack()
 
