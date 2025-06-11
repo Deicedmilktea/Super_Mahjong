@@ -25,7 +25,7 @@ Super_Mahjong/
 │   ├── driver/          # 电机驱动模块
 │   ├── ws2812/          # RGB LED驱动
 │   ├── l298n/           # 直流电机驱动
-│   ├── algorithm/       # 控制算法
+│   ├── algorithm/       # 控制校验算法
 │   └── daemon/          # 守护进程
 ├── Bsp/               # 板级支持包 
 │   ├── usart/           # 串口通信

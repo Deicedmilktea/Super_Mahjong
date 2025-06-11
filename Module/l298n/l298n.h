@@ -6,9 +6,9 @@
 
 typedef enum
 {
-    MOTOR_STOP,     // 电机停止
-    MOTOR_FORWARD,  // 电机正转
-    MOTOR_BACKWARD, // 电机反转
+    L298N_STOP,     // 电机停止
+    L298N_FORWARD,  // 电机正转
+    L298N_BACKWARD, // 电机反转
 } L298N_Motor_Mode_e;
 
 typedef struct

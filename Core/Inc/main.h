@@ -69,14 +69,6 @@ void Error_Handler(void);
 #define ELEVA_RED_2_Pin GPIO_PIN_12
 #define ELEVA_RED_2_GPIO_Port GPIOF
 #define ELEVA_RED_2_EXTI_IRQn EXTI15_10_IRQn
-#define L298N_A1_Pin GPIO_PIN_2
-#define L298N_A1_GPIO_Port GPIOG
-#define L298N_B1_Pin GPIO_PIN_3
-#define L298N_B1_GPIO_Port GPIOG
-#define L298N_A2_Pin GPIO_PIN_4
-#define L298N_A2_GPIO_Port GPIOG
-#define L298N_B2_Pin GPIO_PIN_5
-#define L298N_B2_GPIO_Port GPIOG
 
 /* USER CODE BEGIN Private defines */
 

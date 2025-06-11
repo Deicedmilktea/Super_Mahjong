@@ -21,7 +21,8 @@
 #define MOTOR_LID_OPEN 0x0A
 #define MOTOR_LID_CLOSE 0x0B
 
-#define L298N_MOTOR_PWM 500 // L298N电机PWM值
+#define L298N_MOTOR_PWM 500  // L298N电机PWM值
+#define AT8236_MOTOR_PWM 500 // AT8236电机PWM值
 
 #define NUM_PLAYERS 4 // 玩家数量
 

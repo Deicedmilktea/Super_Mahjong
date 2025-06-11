@@ -74,17 +74,17 @@ void L298NControl(L298N_Instance *l298n, L298N_Motor_Mode_e mode_a, L298N_Motor_
     // 设置电机A的工作模式
     switch (mode_a)
     {
-    case MOTOR_STOP:
+    case L298N_STOP:
         GPIOReset(l298n->gpio_a1);
         GPIOReset(l298n->gpio_a2);
         __HAL_TIM_SET_COMPARE((TIM_HandleTypeDef *)l298n->gpio_ena->timer_handle, l298n->gpio_ena->timer_channel, 0);
         break;
-    case MOTOR_FORWARD:
+    case L298N_FORWARD:
         GPIOSet(l298n->gpio_a1);
         GPIOReset(l298n->gpio_a2);
         __HAL_TIM_SET_COMPARE((TIM_HandleTypeDef *)l298n->gpio_ena->timer_handle, l298n->gpio_ena->timer_channel, l298n->pwm_ena);
         break;
-    case MOTOR_BACKWARD:
+    case L298N_BACKWARD:
         GPIOReset(l298n->gpio_a1);
         GPIOSet(l298n->gpio_a2);
         __HAL_TIM_SET_COMPARE((TIM_HandleTypeDef *)l298n->gpio_ena->timer_handle, l298n->gpio_ena->timer_channel, l298n->pwm_ena);
@@ -94,17 +94,17 @@ void L298NControl(L298N_Instance *l298n, L298N_Motor_Mode_e mode_a, L298N_Motor_
     // 设置电机B的工作模式
     switch (mode_b)
     {
-    case MOTOR_STOP:
+    case L298N_STOP:
         GPIOReset(l298n->gpio_b1);
         GPIOReset(l298n->gpio_b2);
         __HAL_TIM_SET_COMPARE((TIM_HandleTypeDef *)l298n->gpio_enb->timer_handle, l298n->gpio_enb->timer_channel, 0);
         break;
-    case MOTOR_FORWARD:
+    case L298N_FORWARD:
         GPIOSet(l298n->gpio_b1);
         GPIOReset(l298n->gpio_b2);
         __HAL_TIM_SET_COMPARE((TIM_HandleTypeDef *)l298n->gpio_enb->timer_handle, l298n->gpio_enb->timer_channel, l298n->pwm_enb);
         break;
-    case MOTOR_BACKWARD:
+    case L298N_BACKWARD:
         GPIOReset(l298n->gpio_b1);
         GPIOSet(l298n->gpio_b2);
         __HAL_TIM_SET_COMPARE((TIM_HandleTypeDef *)l298n->gpio_enb->timer_handle, l298n->gpio_enb->timer_channel, l298n->pwm_enb);

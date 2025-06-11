@@ -4,8 +4,9 @@
 #include "tim.h"
 #include "rfid.h"
 #include "ai.h"
-#include "l298n.h"
+// #include "l298n.h"
 #include "crc.h"
+#include "at8236.h"
 
 static Driver_Instance *driver;                                                        // 驱动板实例
 static Motor_Instance *motor_push_1, *motor_push_2, *motor_elevator, *motor_turntable; // 电机实例
@@ -13,7 +14,8 @@ static Motor_Instance *motor_conveyor_1, *motor_conveyor_2;                     
 static GPIO_Instance *gpio_key1, *gpio_key2, *gpio_red_1, *gpio_red_2;                 // GPIO实例
 static RFID_Instance *rfid;                                                            // RFID实例
 static AI_Instance *ai;                                                                // AI实例
-static L298N_Instance *l298n;                                                          // L298N电机驱动板实例
+// static L298N_Instance *l298n;                                                          // L298N电机驱动板实例
+static AT8236_Instance *at8236;                                                        // AT8236电机驱动板实例
 
 static int16_t key1_count, key2_count, ir_left_count, last_ir_left_count, ir_right_count, last_ir_right_count = 0; // 按键次数
 static uint8_t conv1_completed = 0, conv2_completed = 0;                                                           // 传送带完成标志
@@ -122,42 +124,77 @@ void mahjong_init()
     };
     ai = AIInit(&ai_init_config);
 
-    L298N_Init_Config_s l298n_init_config = {
-        .gpio_ena_config = {
+    // L298N_Init_Config_s l298n_init_config = {
+    //     .gpio_ena_config = {
+    //         .GPIOx = GPIOD,
+    //         .GPIO_Pin = GPIO_PIN_12,
+    //         .timer_handle = &htim4,
+    //         .timer_channel = TIM_CHANNEL_1,
+    //     },
+    //     .gpio_a1_config = {
+    //         .GPIOx = GPIOG,
+    //         .GPIO_Pin = GPIO_PIN_2,
+    //     },
+    //     .gpio_a2_config = {
+    //         .GPIOx = GPIOG,
+    //         .GPIO_Pin = GPIO_PIN_4,
+    //     },
+    //     .pwm_ena = L298N_MOTOR_PWM,
+    //     .mode_a = MOTOR_STOP,
+
+    //     .gpio_enb_config = {
+    //         .GPIOx = GPIOD,
+    //         .GPIO_Pin = GPIO_PIN_13,
+    //         .timer_handle = &htim4,
+    //         .timer_channel = TIM_CHANNEL_2,
+    //     },
+    //     .gpio_b1_config = {
+    //         .GPIOx = GPIOG,
+    //         .GPIO_Pin = GPIO_PIN_3,
+    //     },
+    //     .gpio_b2_config = {
+    //         .GPIOx = GPIOG,
+    //         .GPIO_Pin = GPIO_PIN_5,
+    //     },
+    //     .pwm_enb = L298N_MOTOR_PWM,
+    //     .mode_b = MOTOR_STOP,
+    // };
+    // l298n = L298NInit(&l298n_init_config);
+    // // HAL_TIM_PWM_Start((TIM_HandleTypeDef *)l298n->gpio_ena->timer_handle, l298n->gpio_ena->timer_channel);
+    // // HAL_TIM_PWM_Start((TIM_HandleTypeDef *)l298n->gpio_enb->timer_handle, l298n->gpio_enb->timer_channel);
+
+    AT8236_Init_Config_s at8236_init_config = {
+        .gpio_a1_config = {
             .GPIOx = GPIOD,
             .GPIO_Pin = GPIO_PIN_12,
             .timer_handle = &htim4,
             .timer_channel = TIM_CHANNEL_1,
         },
-        .gpio_a1_config = {
-            .GPIOx = GPIOG,
-            .GPIO_Pin = GPIO_PIN_2,
-        },
         .gpio_a2_config = {
-            .GPIOx = GPIOG,
-            .GPIO_Pin = GPIO_PIN_4,
-        },
-        .pwm_ena = L298N_MOTOR_PWM,
-        .mode_a = MOTOR_STOP,
-
-        .gpio_enb_config = {
             .GPIOx = GPIOD,
             .GPIO_Pin = GPIO_PIN_13,
             .timer_handle = &htim4,
             .timer_channel = TIM_CHANNEL_2,
         },
+        .pwm_ena = AT8236_MOTOR_PWM,
+        .mode_a = AT8236_STOP,
+
         .gpio_b1_config = {
-            .GPIOx = GPIOG,
-            .GPIO_Pin = GPIO_PIN_3,
+            .GPIOx = GPIOC,
+            .GPIO_Pin = GPIO_PIN_6,
+            .timer_handle = &htim8,
+            .timer_channel = TIM_CHANNEL_1,
         },
         .gpio_b2_config = {
-            .GPIOx = GPIOG,
-            .GPIO_Pin = GPIO_PIN_5,
+            .GPIOx = GPIOC,
+            .GPIO_Pin = GPIO_PIN_8,
+            .timer_handle = &htim8,
+            .timer_channel = TIM_CHANNEL_3,
         },
-        .pwm_enb = L298N_MOTOR_PWM,
-        .mode_b = MOTOR_STOP,
+        .pwm_enb = AT8236_MOTOR_PWM,
+        .mode_b = AT8236_STOP,
     };
-    l298n = L298NInit(&l298n_init_config);
+    at8236 = AT8236Init(&at8236_init_config);
     // HAL_TIM_PWM_Start((TIM_HandleTypeDef *)l298n->gpio_ena->timer_handle, l298n->gpio_ena->timer_channel);
     // HAL_TIM_PWM_Start((TIM_HandleTypeDef *)l298n->gpio_enb->timer_handle, l298n->gpio_enb->timer_channel);
 
@@ -911,7 +948,7 @@ static void phase_over_task()
  */
 static void phase_error_task()
 {
-    driver->stop_flag = MOTOR_STOP;
+    driver->stop_flag = MOTOR_FLAG_STOP;
 }
 /**
  * @brief 获取全局游戏状态指针
