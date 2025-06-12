@@ -16,17 +16,6 @@ AT8236_Instance *AT8236Init(AT8236_Init_Config_s *init_config)
     }
     memset(at8236, 0, sizeof(AT8236_Instance));
 
-    Motor_Init_Config_s motor_config = {
-        .controller_param_init_config = {},
-        .controller_setting_init_config = {},
-    };
-
-    at8236->motor_a = MotorRegister(&motor_config);
-    if (at8236->motor_a == NULL)
-    {
-        free(at8236);
-        return NULL; // 电机A实例化失败
-    }
     at8236->pwm_ena = init_config->pwm_ena;
     at8236->gpio_a1 = GPIORegister(&init_config->gpio_a1_config);
     at8236->gpio_a2 = GPIORegister(&init_config->gpio_a2_config);
@@ -34,12 +23,6 @@ AT8236_Instance *AT8236Init(AT8236_Init_Config_s *init_config)
     HAL_TIM_PWM_Start((TIM_HandleTypeDef *)at8236->gpio_a1->timer_handle, at8236->gpio_a1->timer_channel);
     HAL_TIM_PWM_Start((TIM_HandleTypeDef *)at8236->gpio_a2->timer_handle, at8236->gpio_a2->timer_channel);
 
-    at8236->motor_b = MotorRegister(&motor_config);
-    if (at8236->motor_b == NULL)
-    {
-        free(at8236);
-        return NULL; // 电机B实例化失败
-    }
     at8236->pwm_enb = init_config->pwm_enb;
     at8236->gpio_b1 = GPIORegister(&init_config->gpio_b1_config);
     at8236->gpio_b2 = GPIORegister(&init_config->gpio_b2_config);
@@ -57,19 +40,15 @@ AT8236_Instance *AT8236Init(AT8236_Init_Config_s *init_config)
  * @param mode_a 电机A工作模式
  * @param mode_b 电机B工作模式
  */
-void AT8236Control(AT8236_Instance *at8236, AT8236_Motor_Mode_e mode_a, AT8236_Motor_Mode_e mode_b)
+void AT8236Control(AT8236_Instance *at8236)
 {
     if (at8236 == NULL)
     {
         return; // 检查AT8236实例是否为NULL
     }
 
-    // 更新电机A和B的工作模式
-    at8236->mode_a = mode_a;
-    at8236->mode_b = mode_b;
-
     // 控制电机A
-    switch (mode_a)
+    switch (at8236->mode_a)
     {
     case AT8236_STOP:
         // 电机A停止：两个PWM通道都设为0
@@ -105,7 +84,7 @@ void AT8236Control(AT8236_Instance *at8236, AT8236_Motor_Mode_e mode_a, AT8236_M
     }
 
     // 控制电机B
-    switch (mode_b)
+    switch (at8236->mode_b)
     {
     case AT8236_STOP:
         // 电机B停止：两个PWM通道都设为0

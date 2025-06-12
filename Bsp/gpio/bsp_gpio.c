@@ -38,6 +38,8 @@ GPIO_Instance *GPIORegister(GPIO_Init_Config_s *GPIO_config)
     ins->exti_mode = GPIO_config->exti_mode;
     ins->id = GPIO_config->id;
     ins->gpio_model_callback = GPIO_config->gpio_model_callback;
+    ins->timer_handle = GPIO_config->timer_handle;
+    ins->timer_channel = GPIO_config->timer_channel;
     gpio_instance[idx++] = ins;
     return ins;
 }
