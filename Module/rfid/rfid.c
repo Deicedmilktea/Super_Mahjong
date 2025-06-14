@@ -107,6 +107,7 @@ RFID_Instance *RFIDInit(RFID_Init_Config_s *init_config)
     RFIDQueueInit(&rfid_instance->draw_tile_2);
     RFIDQueueInit(&rfid_instance->discard_tile);
 
+    init_config->usart_config.id = rfid_instance;
     rfid_instance->usart = USARTRegister(&init_config->usart_config);
     if (!rfid_instance->usart)
     {

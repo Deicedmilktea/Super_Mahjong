@@ -20,6 +20,7 @@ AI_Instance *AIInit(AI_Init_Config_s *init_config)
     AI_Instance *ai_instance = (AI_Instance *)malloc(sizeof(AI_Instance));
     memset(ai_instance, 0, sizeof(AI_Instance));
 
+    init_config->usart_config.id = ai_instance;
     ai_instance->usart = USARTRegister(&init_config->usart_config);
     if (!ai_instance->usart)
     {
@@ -55,7 +56,7 @@ void AICallback(USART_Instance *_usart_instance)
     ai_instance->ai_recv = *(AI_Receive_s *)rx_buf;
     if (ai_instance->ai_recv.index != ai_instance->last_index)
     {
-        ai_instance->is_recv = 1;                              // Set received flag
+        ai_instance->is_recv = 1;                             // Set received flag
         ai_instance->last_index = ai_instance->ai_recv.index; // Update last index
     }
 }

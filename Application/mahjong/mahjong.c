@@ -4,7 +4,6 @@
 #include "tim.h"
 #include "rfid.h"
 #include "ai.h"
-// #include "l298n.h"
 #include "crc.h"
 #include "at8236.h"
 
@@ -96,28 +95,25 @@ void mahjong_init()
         },
         .usart_config = {
             .recv_buff_size = USART_RXBUFF_LIMIT,
-            .usart_handle = &huart3,                 // 使用USART2
-            .id = driver,                            // 传入驱动板实例
+            .usart_handle = &huart2,                 // 使用USART2
             .usart_module_callback = DriverCallback, // 串口回调函数
         },
     };
     driver = DriverInit(&init_config);
 
-    // RFID_Init_Config_s rfid_init_config = {
-    //     .usart_config = {
-    //         .recv_buff_size = USART_RXBUFF_LIMIT,
-    //         .usart_handle = &huart3,               // 使用USART3
-    //         .id = rfid,                            // 传入RFID实例
-    //         .usart_module_callback = RFIDCallback, // 串口回调函数
-    //     },
-    // };
-    // rfid = RFIDInit(&rfid_init_config);
+    RFID_Init_Config_s rfid_init_config = {
+        .usart_config = {
+            .recv_buff_size = USART_RXBUFF_LIMIT,
+            .usart_handle = &huart3,               // 使用USART3
+            .usart_module_callback = RFIDCallback, // 串口回调函数
+        },
+    };
+    rfid = RFIDInit(&rfid_init_config);
 
     AI_Init_Config_s ai_init_config = {
         .usart_config = {
             .recv_buff_size = AI_RECV_SIZE,
             .usart_handle = &huart1,             // 使用USART1
-            .id = ai,                            // 传入AI实例
             .usart_module_callback = AICallback, // 串口回调函数
         },
     };
@@ -265,7 +261,7 @@ void mahjong_task()
     // MotorControl(driver);
     // AT8236Control(at8236); // 控制AT8236电机驱动板
 
-    char *pwm_cmd = "$pwm:-2000,0,0,0#";
+    char *pwm_cmd = "$pwm:0,0,0,-1000#";
     USARTSend(driver->usart, (uint8_t *)pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
     // HAL_GPIO_WritePin(GPIOG, GPIO_PIN_2, GPIO_PIN_SET);
     // HAL_GPIO_WritePin(GPIOG, GPIO_PIN_4, GPIO_PIN_RESET);
@@ -274,20 +270,20 @@ void mahjong_task()
     // L298NControl(l298n, MOTOR_FORWARD, MOTOR_FORWARD); // 启动L298N电机驱动板A通道
     // HAL_UART_Transmit(&huart1, (uint8_t *)"hello\r\n", 7, 100); // 测试串口通信
 
-    // ai->ai_send.current_phase = PHASE_SINGLE_REFILL;                                      // 发牌阶段
-    // ai->ai_send.player = PLAYER_ID_SOUTH;                                                 // 玩家编号 (东)
-    // ai->ai_send.action = ACTION_DISCARD;                                                  // 玩家操作类型 (杠)
-    // ai->ai_send.tile_type = TILE_TYPE_TIAO;                                               // 牌类型 (万/条/筒/字)
-    // ai->ai_send.tile_value = 3;                                                           // 牌面值
+    // ai->ai_send.current_phase = PHASE_SINGLE_REFILL;                                     // 发牌阶段
+    // ai->ai_send.player = PLAYER_ID_SOUTH;                                                // 玩家编号 (东)
+    // ai->ai_send.action = ACTION_DISCARD;                                                 // 玩家操作类型 (杠)
+    // ai->ai_send.tile_type = TILE_TYPE_TIAO;                                              // 牌类型 (万/条/筒/字)
+    // ai->ai_send.tile_value = 3;                                                          // 牌面值
     // ai->ai_send.check_sum = CRC16_CCITT((uint8_t *)&ai->ai_send, sizeof(AI_Send_s) - 3); // 计算校验和
-    // AISendData(ai, &ai->ai_send);                                                         // 发送AI数据
+    // AISendData(ai, &ai->ai_send);                                                        // 发送AI数据
 
     // AT8236Control(at8236, AT8236_FORWARD, AT8236_FORWARD); // 启动AT8236电机驱动板A通道
     HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET);
     HAL_GPIO_WritePin(GPIOD, GPIO_PIN_3, GPIO_PIN_RESET);
 
-    // __HAL_TIM_SetCompare(&htim4, TIM_CHANNEL_1, 6000);
-    // __HAL_TIM_SetCompare(&htim4, TIM_CHANNEL_2, 0);
+    __HAL_TIM_SetCompare(&htim4, TIM_CHANNEL_1, 8400);
+    __HAL_TIM_SetCompare(&htim4, TIM_CHANNEL_2, 0);
 }
 
 /**
@@ -373,7 +369,7 @@ static void phase_dealing_task()
             }
             else
             {
-                // motor_turntable_stop();
+                motor_turntable_stop();
                 global_game.dealing_sub_state = DEAL_TRAY_DOWN_B2_START;
             }
         }
@@ -450,7 +446,7 @@ static void phase_dealing_task()
             }
             else
             {
-                // turntable_stop();
+                motor_turntable_stop();
                 global_game.dealing_sub_state = DEAL_TRAY_UP_START; // 进入托盘上升状态
             }
         }
@@ -601,7 +597,7 @@ static void phase_jumping_task()
                 }
                 else
                 {
-                    // motor_turntable_stop();
+                    motor_turntable_stop();
                     global_game.jumping_sub_state = JUMP_TRAY_UP_START; // 进入托盘上升状态
                 }
             }
@@ -630,7 +626,7 @@ static void phase_jumping_task()
                 }
                 else
                 {
-                    // motor_turntable_stop();
+                    motor_turntable_stop();
                     global_game.jumping_sub_state = JUMP_TRAY_UP_START; // 进入托盘上升状态
                 }
             }
@@ -751,7 +747,7 @@ static void phase_single_refill_task()
                 }
                 else
                 {
-                    // motor_turntable_stop();
+                    motor_turntable_stop();
                     global_game.single_refill_sub_state = REFILL_TRAY_UP_START; // 进入托盘上升状态
                 }
             }

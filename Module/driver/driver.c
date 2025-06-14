@@ -34,6 +34,7 @@ Driver_Instance *DriverInit(Driver_Init_Config_s *init_config)
     memset(driver, 0, sizeof(Driver_Instance));
 
     // 注册usart实例
+    init_config->usart_config.id = driver; // 设置id为驱动板实例,用于回调函数中识别
     driver->usart = USARTRegister(&init_config->usart_config);
 
     for (int i = 0; i < MOTOR_CNT; ++i)
