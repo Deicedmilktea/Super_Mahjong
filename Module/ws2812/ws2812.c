@@ -205,27 +205,6 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
     // Add other timer DMA completion handlers if necessary
 }
 
-/*
-Note on HAL_TIM_PWM_PulseFinishedCallback:
-You need to ensure this function is called correctly.
-In your stm32f4xx_it.c (or wherever HAL callbacks are defined), you'll have:
-
-void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
-{
-  // Example: If TIM3 is used for WS2812 on Channel 1
-  // if (htim->Instance == TIM3) // Replace TIM3 with your actual timer
-  // {
-  //    WS2812_TIM_PWM_PulseFinishedCallback(htim);
-  // }
-  // Add other timer DMA completion handlers if necessary
-}
-
-Make sure the DMA for the timer (e.g., TIMx_CHy or TIMx_UP) is configured
-and its interrupt is enabled in the NVIC. The DMA should be in Normal mode, not Circular.
-The timer's PWM period (ARR) and the WS2812_PWM_HIGH_BIT/LOW_BIT values must be
-carefully calculated based on your system clock and the WS2812 datasheet timings.
-*/
-
 /**
  * @brief Implements a brightness-based flowing water light effect on the WS2812 strip.
  * @param ws Pointer to the WS2812_Instance.

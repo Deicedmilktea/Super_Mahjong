@@ -35,7 +35,7 @@ void LEDTask(void)
         if (HAL_GetTick() - last_time >= 50) // 流水灯每50ms更新一次
         {
             // 使用紫红色作为主色，通过亮度渐变实现流水灯效果
-            WS2812_WaterFlow(ws2812, 255, 0, 255, 6, WS2812_LED_NUM - 1, 128, 0);
+            WS2812_WaterFlow(ws2812, 255, 0, 255, 0, WS2812_LED_NUM - 1, 128, 0);
             last_time = HAL_GetTick();
         }
     }

@@ -64,6 +64,8 @@ typedef enum
     JUMP_TRAY_DOWN_B1_WAIT_COMPLETE, // 等待托盘下降完成
     JUMP_CONV_START,                 // 第1层，传送带启动
     JUMP_CONV_WAIT_TILE,             // 第1层，等待传送带的牌
+    JUMP_TRAY_DOWN_B2_START,         // 托盘下降启动
+    JUMP_TRAY_DOWN_B2_WAIT_COMPLETE, // 等待托盘下降完成
     JUMP_PUSH_OUT_WAIT_COMPLETE,     // 等待推牌电机向外推完成
     JUMP_TRAY_UP_START,              // 托盘上升启动
     JUMP_TRAY_UP_WAIT_COMPLETE,      // 等待托盘上升完成
@@ -78,6 +80,8 @@ typedef enum
     REFILL_TRAY_DOWN_B1_WAIT_COMPLETE, // 等待托盘下降完成
     REFILL_CONV_START,                 // 第1层，传送带启动
     REFILL_CONV_WAIT_TILE,             // 第1层，等待传送带的牌
+    REFILL_TRAY_DOWN_B2_START,         // 托盘下降启动
+    REFILL_TRAY_DOWN_B2_WAIT_COMPLETE, // 等待托盘下降完成
     REFILL_PUSH_OUT_WAIT_COMPLETE,     // 等待推牌电机向外推完成
     REFILL_TRAY_UP_START,              // 托盘上升启动
     REFILL_TRAY_UP_WAIT_COMPLETE,      // 等待托盘上升完成
