@@ -57,12 +57,12 @@ void DriverCallback(USART_Instance *_usart_instance)
     uint8_t *rx_buf = driver_instance->usart->recv_buff;
     uint16_t rx_len = driver_instance->usart->data_len;
 
-    // 基本长度检查
-    if (rx_len == 0 || rx_len > 32)
-    {
-        driver_instance->callback_flag = MOTOR_CALLBACK_NONE;
-        return;
-    }
+    // // 基本长度检查
+    // if (rx_len < 16 || rx_len > 32)
+    // {
+    //     driver_instance->callback_flag = MOTOR_CALLBACK_NONE;
+    //     return;
+    // }
 
     // 尝试在接收缓冲区中查找完整的帧
     if (FindAndProcessFrame(driver_instance, rx_buf, rx_len))
@@ -72,8 +72,8 @@ void DriverCallback(USART_Instance *_usart_instance)
         return;
     }
 
-    // 如果没有找到完整帧，设置正常回调标志
-    driver_instance->callback_flag = MOTOR_CALLBACK_NONE;
+    // // 如果没有找到完整帧，设置正常回调标志
+    // driver_instance->callback_flag = MOTOR_CALLBACK_NONE;
 }
 
 /**
@@ -99,7 +99,7 @@ uint8_t FindAndProcessFrame(Driver_Instance *driver_instance, uint8_t *buffer, u
                     uint16_t frame_length = end_pos - start_pos + 1;
 
                     // 验证帧长度合理性
-                    if (frame_length >= 16 && frame_length <= 64)
+                    if (frame_length >= 14 && frame_length <= 64)
                     {
                         // 处理这个完整帧
                         if (ProcessCompleteFrame(driver_instance, &buffer[start_pos], frame_length))

@@ -6,7 +6,7 @@
 #define AI_RECV_HEADER 0xA7 // AI接收数据头标识符
 #define AI_SEND_HEADER 0xAA // AI发送数据头标识符
 #define AI_SEND_TAIL 0x55   // AI发送数据尾标识符
-#define AI_RECV_SIZE 4u     // AI接收数据大小
+#define AI_RECV_SIZE 6u     // AI接收数据大小
 #define AI_SEND_SIZE 9u     // AI发送数据大小
 
 #pragma pack(1)

@@ -76,6 +76,7 @@ typedef enum
 typedef enum
 {
     REFILL_INIT,                       // 初始化
+    REFILL_AI_DISCARD,                 // AI玩家打牌
     REFILL_TRAY_DOWN_B1_START,         // 托盘下降启动
     REFILL_TRAY_DOWN_B1_WAIT_COMPLETE, // 等待托盘下降完成
     REFILL_CONV_START,                 // 第1层，传送带启动

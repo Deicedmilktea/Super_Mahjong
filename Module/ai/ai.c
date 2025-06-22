@@ -48,7 +48,7 @@ void AICallback(USART_Instance *_usart_instance)
     uint8_t *rx_buf = ai_instance->usart->recv_buff;
     uint16_t rx_len = ai_instance->usart->data_len;
 
-    if (rx_len < sizeof(AI_Receive_s) || rx_buf[0] != AI_RECV_HEADER || rx_buf[rx_len - 1] != CRC16_CCITT(rx_buf, rx_len - 2))
+    if (rx_len < sizeof(AI_Receive_s) || rx_buf[0] != AI_RECV_HEADER || ((rx_buf[rx_len - 2] << 8) | rx_buf[rx_len - 1]) != CRC16_CCITT(rx_buf, rx_len - 2))
     {
         return; // Invalid data length or header
     }

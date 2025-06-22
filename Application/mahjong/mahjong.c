@@ -193,7 +193,7 @@ void mahjong_init()
 
     // 牌局阶段init
     global_game.current_dealer = PLAYER_ID_EAST;             // 初始庄家为东
-    global_game.ai = PLAYER_ID_NORTH;                        // AI玩家为北
+    global_game.ai = PLAYER_ID_NORTH;                        // AI玩家为南
     global_game.current_player = global_game.current_dealer; // 初始行动玩家为庄家
     global_game.index = 0;                                   // 初始操作数量索引为0
     global_game.global_phase = PHASE_IDLE;
@@ -315,7 +315,6 @@ static void phase_dealing_task()
     // 初始化发牌阶段
     case DEAL_INIT:
         dealStep++; // 发牌轮数增加
-        global_game.dealing_sub_state = DEAL_TRAY_DOWN_B1_START;
         /*********************** 此处是因为直接跳过AI回合 ************************/
         if (global_game.current_player == global_game.ai) // 如果当前玩家是AI
         {
@@ -332,6 +331,10 @@ static void phase_dealing_task()
                 last_key2_count = key2_count;             // 重置按键计数
             }
             global_game.dealing_sub_state = DEAL_INIT; // 重置发牌状态机
+        }
+        else
+        {
+            global_game.dealing_sub_state = DEAL_TRAY_DOWN_B1_START;
         }
         break;
 
@@ -513,7 +516,6 @@ static void phase_jumping_task()
     // 初始化跳牌阶段
     case JUMP_INIT:
         jumpStep++;
-        global_game.jumping_sub_state = JUMP_TRAY_DOWN_B1_START;
         /*********************** 此处是因为直接跳过AI回合 ************************/
         if (global_game.current_player == global_game.ai)
         {
@@ -527,6 +529,10 @@ static void phase_jumping_task()
                 last_key2_count = key2_count; // 重置按键计数
             }
             global_game.jumping_sub_state = JUMP_INIT;
+        }
+        else
+        {
+            global_game.jumping_sub_state = JUMP_TRAY_DOWN_B1_START;
         }
         break;
 
@@ -757,24 +763,32 @@ static void phase_single_refill_task()
     // 初始化单张摸牌并补牌阶段
     case REFILL_INIT:
         refillStep++; // 单张摸牌步数增加
-        global_game.single_refill_sub_state = REFILL_TRAY_DOWN_B1_START;
         /*********************** 此处是因为直接跳过AI回合 ************************/
         if (global_game.current_player == global_game.ai)
         {
-            set_send_ai_draw_data(&rfid->draw_tile_1); // 设置AI摸牌数据
-            if (ai->is_recv)                           // 如果机器人打出牌
-            {
-                ai->is_recv = 0;         // 重置接收标志
-                switch_to_next_player(); // 切换到下一个玩家
-            }
-            if (refillStep >= 55) // 如果单张摸牌步数超过55，则进入结束阶段
-            {
-                global_game.global_phase = PHASE_OVER;
-                refillStep = 0;               // 重置补牌步数
-                last_key1_count = key1_count; // 重置按键计数
-                last_key2_count = key2_count; // 重置按键计数
-            }
+            set_send_ai_draw_data(&rfid->draw_tile_1);               // 设置AI摸牌数据
+            global_game.single_refill_sub_state = REFILL_AI_DISCARD; // 进入AI打牌状态
+        }
+        else
+        {
+            global_game.single_refill_sub_state = REFILL_TRAY_DOWN_B1_START; // 进入托盘下降状态
+        }
+        break;
+
+    case REFILL_AI_DISCARD:
+        // AI玩家打牌逻辑
+        if (ai->is_recv) // 如果机器人打出牌
+        {
+            ai->is_recv = 0;                                   // 重置接收标志
+            switch_to_next_player();                           // 切换到下一个玩家
             global_game.single_refill_sub_state = REFILL_INIT; // 重置跳牌状态机
+        }
+        if (refillStep >= 55) // 如果单张摸牌步数超过55，则进入结束阶段
+        {
+            global_game.global_phase = PHASE_OVER;
+            refillStep = 0;               // 重置补牌步数
+            last_key1_count = key1_count; // 重置按键计数
+            last_key2_count = key2_count; // 重置按键计数
         }
         break;
 
@@ -996,25 +1010,41 @@ static void switch_to_next_player(void)
  */
 static uint8_t set_send_ai_draw_data(RFIDQueue *queue)
 {
+    // Tile tile;
+    // if (RFIDDequeue(queue, &tile)) // 从RFID队列中取出牌
+    // {
+    //     ai->ai_send.current_phase = global_game.global_phase;                                // 设置AI发送的发牌阶段
+    //     ai->ai_send.action = ACTION_DRAW;                                                    // 设置AI发送的操作类型为摸牌
+    //     ai->ai_send.player = global_game.current_player;                                     // 设置AI发送的玩家编号
+    //     ai->ai_send.index = global_game.index;                                               // 设置AI发送的操作数量索引
+    //     ai->ai_send.tile_type = tile.type;                                                   // 设置AI发送的牌类型
+    //     ai->ai_send.tile_value = tile.value;                                                 // 设置AI发送的牌面值
+    //     ai->ai_send.check_sum = CRC16_CCITT((uint8_t *)&ai->ai_send, sizeof(AI_Send_s) - 3); // 计算校验和
+    //     for (uint8_t i = 0; i < 10; i++)
+    //     {
+    //         AISendData(ai, &ai->ai_send); // 发送AI数据
+    //     }
+    //     global_game.index++; // 增加操作数量索引
+    //     return 1;            // 成功发送数据
+    // }
+    // else
+    //     return 0;
+
     Tile tile;
-    if (RFIDDequeue(queue, &tile)) // 从RFID队列中取出牌
+    tile.type = TILE_TYPE_WAN;                                                           // 获取摸牌的类型
+    tile.value = 1;                                                                      // 获取摸牌的面
+    ai->ai_send.current_phase = global_game.global_phase;                                // 设置AI发送的发牌阶段
+    ai->ai_send.action = ACTION_DRAW;                                                    // 设置AI发送的操作类型为摸牌
+    ai->ai_send.player = global_game.current_player;                                     // 设置AI发送的玩家编号
+    ai->ai_send.index = global_game.index;                                               // 设置AI发送的操作数量索引
+    ai->ai_send.tile_type = tile.type;                                                   // 设置AI发送的牌类型
+    ai->ai_send.tile_value = tile.value;                                                 // 设置AI发送的牌面值
+    ai->ai_send.check_sum = CRC16_CCITT((uint8_t *)&ai->ai_send, sizeof(AI_Send_s) - 3); // 计算校验和
+    for (uint8_t i = 0; i < 10; i++)
     {
-        ai->ai_send.current_phase = global_game.global_phase;                                // 设置AI发送的发牌阶段
-        ai->ai_send.action = ACTION_DRAW;                                                    // 设置AI发送的操作类型为摸牌
-        ai->ai_send.player = global_game.current_player;                                     // 设置AI发送的玩家编号
-        ai->ai_send.index = global_game.index;                                               // 设置AI发送的操作数量索引
-        ai->ai_send.tile_type = tile.type;                                                   // 设置AI发送的牌类型
-        ai->ai_send.tile_value = tile.value;                                                 // 设置AI发送的牌面值
-        ai->ai_send.check_sum = CRC16_CCITT((uint8_t *)&ai->ai_send, sizeof(AI_Send_s) - 3); // 计算校验和
-        for (uint8_t i = 0; i < 10; i++)
-        {
-            AISendData(ai, &ai->ai_send); // 发送AI数据
-        }
-        global_game.index++; // 增加操作数量索引
-        return 1;            // 成功发送数据
+        AISendData(ai, &ai->ai_send); // 发送AI数据
     }
-    else
-        return 0;
+    global_game.index++; // 增加操作数量索引
 }
 
 /**
