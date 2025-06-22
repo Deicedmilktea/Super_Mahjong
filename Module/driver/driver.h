@@ -7,7 +7,7 @@
 
 #define MOTOR_CNT 4            // 电机数量,目前只支持4个电机
 #define DRIVER_MAX_NUM 1       // 驱动板数量,目前只支持1个驱动板
-#define DRIVER_RXBUFF_LIMIT 64 // 串口接收缓冲区限制
+#define DRIVER_RXBUFF_LIMIT 32 // 串口接收缓冲区限制
 
 /**
  * @brief 闭环类型,如果需要多个闭环,则使用或运算
@@ -193,5 +193,23 @@ void MotorControl(Driver_Instance *driver);
  * @param tolerance 允许的误差范围
  */
 uint8_t MotorIsAtPosition(Motor_Instance *motor, int16_t tolerance);
+
+/**
+ * @brief 在接收缓冲区中查找并处理完整的数据帧
+ * @param driver_instance 驱动实例
+ * @param buffer 接收缓冲区
+ * @param length 缓冲区长度
+ * @return 1表示找到并处理了完整帧，0表示没有找到完整帧
+ */
+uint8_t FindAndProcessFrame(Driver_Instance *driver_instance, uint8_t *buffer, uint16_t length);
+
+/**
+ * @brief 处理一个完整的数据帧
+ * @param driver_instance 驱动实例
+ * @param frame_buffer 帧数据缓冲区
+ * @param frame_length 帧长度
+ * @return 1表示处理成功，0表示处理失败
+ */
+uint8_t ProcessCompleteFrame(Driver_Instance *driver_instance, uint8_t *frame_buffer, uint16_t frame_length);
 
 #endif // !DRIVER_H

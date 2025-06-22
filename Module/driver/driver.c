@@ -50,29 +50,98 @@ Driver_Instance *DriverInit(Driver_Init_Config_s *init_config)
     return driver;
 }
 
+// 改进的驱动回调函数，增加帧同步功能
 void DriverCallback(USART_Instance *_usart_instance)
 {
     Driver_Instance *driver_instance = (Driver_Instance *)_usart_instance->id;
     uint8_t *rx_buf = driver_instance->usart->recv_buff;
-    uint16_t rx_len = driver_instance->usart->data_len; // Actual length of received data from ISR
+    uint16_t rx_len = driver_instance->usart->data_len;
 
-    if (rx_len < 16 || rx_len > USART_RXBUFF_LIMIT || rx_buf[0] != '$' || rx_buf[rx_len - 3] != '#')
+    // 基本长度检查
+    if (rx_len == 0 || rx_len > 32)
     {
-        driver_instance->callback_flag = MOTOR_CALLBACK_NORMAL; // 设置回调标志为正常接收信号
+        driver_instance->callback_flag = MOTOR_CALLBACK_NONE;
         return;
     }
 
-    char temp_buf[rx_len + 1];
+    // 尝试在接收缓冲区中查找完整的帧
+    if (FindAndProcessFrame(driver_instance, rx_buf, rx_len))
+    {
+        // 成功处理了一个完整帧
+        driver_instance->callback_flag = MOTOR_CALLBACK_NORMAL;
+        return;
+    }
 
-    // Copy the received data into the temporary buffer.
-    memcpy(temp_buf, rx_buf, rx_len);
-    // Null-terminate the string in the temporary buffer for safe string operations.
-    temp_buf[rx_len] = '\0';
+    // 如果没有找到完整帧，设置正常回调标志
+    driver_instance->callback_flag = MOTOR_CALLBACK_NONE;
+}
 
+/**
+ * @brief 在接收缓冲区中查找并处理完整的数据帧
+ * @param driver_instance 驱动实例
+ * @param buffer 接收缓冲区
+ * @param length 缓冲区长度
+ * @return 1表示找到并处理了完整帧，0表示没有找到完整帧
+ */
+uint8_t FindAndProcessFrame(Driver_Instance *driver_instance, uint8_t *buffer, uint16_t length)
+{
+    // 查找起始标志 '$'
+    for (uint16_t start_pos = 0; start_pos < length; start_pos++)
+    {
+        if (buffer[start_pos] == '$')
+        {
+            // 找到起始标志，现在查找结束标志 '#'
+            for (uint16_t end_pos = start_pos + 1; end_pos < length; end_pos++)
+            {
+                if (buffer[end_pos] == '#')
+                {
+                    // 找到完整帧，计算帧长度
+                    uint16_t frame_length = end_pos - start_pos + 1;
+
+                    // 验证帧长度合理性
+                    if (frame_length >= 16 && frame_length <= 64)
+                    {
+                        // 处理这个完整帧
+                        if (ProcessCompleteFrame(driver_instance, &buffer[start_pos], frame_length))
+                        {
+                            return 1; // 成功处理
+                        }
+                    }
+
+                    // 如果当前帧处理失败，继续查找下一个可能的帧
+                    start_pos = end_pos; // 从当前结束位置继续搜索
+                    break;
+                }
+            }
+        }
+    }
+
+    return 0; // 没有找到完整帧
+}
+
+/**
+ * @brief 处理一个完整的数据帧
+ * @param driver_instance 驱动实例
+ * @param frame_buffer 帧数据缓冲区
+ * @param frame_length 帧长度
+ * @return 1表示处理成功，0表示处理失败
+ */
+uint8_t ProcessCompleteFrame(Driver_Instance *driver_instance, uint8_t *frame_buffer, uint16_t frame_length)
+{
+    char temp_buf[frame_length + 1];
     int m1, m2, m3, m4;
 
-    // Process $MAll: type messages
-    // Example: $MAll:0,0,1,0#
+    // 复制并添加字符串结束符
+    memcpy(temp_buf, frame_buffer, frame_length);
+    temp_buf[frame_length] = '\0';
+
+    // 验证帧格式（起始符和结束符）
+    if (temp_buf[0] != '$' || temp_buf[frame_length - 1] != '#')
+    {
+        return 0;
+    }
+
+    // 处理 $MAll: 类型消息
     if (strncmp(temp_buf, "$MAll:", 6) == 0)
     {
         int parsed_count = sscanf(temp_buf, "$MAll:%d,%d,%d,%d#", &m1, &m2, &m3, &m4);
@@ -83,7 +152,7 @@ void DriverCallback(USART_Instance *_usart_instance)
             driver_instance->motor[2]->measure.total_ecd = m3;
             driver_instance->motor[3]->measure.total_ecd = m4;
 
-            // use for reset
+            // 复位逻辑
             if (driver_instance->mahjong_phase)
             {
                 driver_instance->motor[0]->measure.init_ecd = m1;
@@ -93,12 +162,10 @@ void DriverCallback(USART_Instance *_usart_instance)
                 driver_instance->mahjong_phase = 0;
             }
 
-            return;
+            return 1; // 成功处理
         }
     }
-
-    // Process $MTEP: type messages (retained from previous logic)
-    // Example: $MTEP:123,456,789,101#
+    // 处理 $MTEP: 类型消息
     else if (strncmp(temp_buf, "$MTEP:", 6) == 0)
     {
         int parsed_count = sscanf(temp_buf, "$MTEP:%d,%d,%d,%d#", &m1, &m2, &m3, &m4);
@@ -113,9 +180,12 @@ void DriverCallback(USART_Instance *_usart_instance)
             driver_instance->motor[1]->measure.ecd = m2;
             driver_instance->motor[2]->measure.ecd = m3;
             driver_instance->motor[3]->measure.ecd = m4;
-            return;
+
+            return 1; // 成功处理
         }
     }
+
+    return 0; // 未知帧类型或解析失败
 }
 
 /**
