@@ -5,8 +5,9 @@
 #include "controller.h"
 #include "daemon.h"
 
-#define MOTOR_CNT 4      // 电机数量,目前只支持4个电机
-#define DRIVER_MAX_NUM 1 // 驱动板数量,目前只支持1个驱动板
+#define MOTOR_CNT 4            // 电机数量,目前只支持4个电机
+#define DRIVER_MAX_NUM 1       // 驱动板数量,目前只支持1个驱动板
+#define DRIVER_RXBUFF_LIMIT 64 // 串口接收缓冲区限制
 
 /**
  * @brief 闭环类型,如果需要多个闭环,则使用或运算
@@ -191,6 +192,6 @@ void MotorControl(Driver_Instance *driver);
  * @param motor 电机实例
  * @param tolerance 允许的误差范围
  */
-uint8_t MotorIsAtPosition(Motor_Instance *motor, float tolerance);
+uint8_t MotorIsAtPosition(Motor_Instance *motor, int16_t tolerance);
 
 #endif // !DRIVER_H

@@ -95,7 +95,7 @@ void mahjong_init()
             motor_turntable,
         },
         .usart_config = {
-            .recv_buff_size = USART_RXBUFF_LIMIT,
+            .recv_buff_size = DRIVER_RXBUFF_LIMIT,
             .usart_handle = &huart2,                 // 使用USART2
             .usart_module_callback = DriverCallback, // 串口回调函数
         },
@@ -193,7 +193,7 @@ void mahjong_init()
 
     // 牌局阶段init
     global_game.current_dealer = PLAYER_ID_EAST;             // 初始庄家为东
-    global_game.ai = PLAYER_ID_NORTH;                        // AI玩家为南
+    global_game.ai = PLAYER_ID_NORTH;                        // AI玩家为北
     global_game.current_player = global_game.current_dealer; // 初始行动玩家为庄家
     global_game.index = 0;                                   // 初始操作数量索引为0
     global_game.global_phase = PHASE_IDLE;
@@ -259,11 +259,11 @@ void mahjong_task()
     else
         driver->stop_flag = MOTOR_FLAG_ENABLED;
 
-    // MotorControl(driver);
-    // AT8236Control(at8236); // 控制AT8236电机驱动板
+    MotorControl(driver);
+    AT8236Control(at8236); // 控制AT8236电机驱动板
 
-    char *pwm_cmd = "$pwm:0,0,0,-1000#";
-    USARTSend(driver->usart, (uint8_t *)pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
+    // char *pwm_cmd = "$pwm:0,0,0,-1000#";
+    // USARTSend(driver->usart, (uint8_t *)pwm_cmd, strlen(pwm_cmd), USART_TRANSFER_BLOCKING);
     // HAL_GPIO_WritePin(GPIOG, GPIO_PIN_2, GPIO_PIN_SET);
     // HAL_GPIO_WritePin(GPIOG, GPIO_PIN_4, GPIO_PIN_RESET);
     // phase = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_2);
@@ -280,11 +280,11 @@ void mahjong_task()
     // AISendData(ai, &ai->ai_send);                                                        // 发送AI数据
 
     // AT8236Control(at8236, AT8236_FORWARD, AT8236_FORWARD); // 启动AT8236电机驱动板A通道
-    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_3, GPIO_PIN_RESET);
+    // HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET);
+    // HAL_GPIO_WritePin(GPIOD, GPIO_PIN_3, GPIO_PIN_RESET);
 
-    __HAL_TIM_SetCompare(&htim4, TIM_CHANNEL_1, 8400);
-    __HAL_TIM_SetCompare(&htim4, TIM_CHANNEL_2, 0);
+    // __HAL_TIM_SetCompare(&htim4, TIM_CHANNEL_1, 8400);
+    // __HAL_TIM_SetCompare(&htim4, TIM_CHANNEL_2, 0);
 }
 
 /**
@@ -293,11 +293,16 @@ void mahjong_task()
 static void phase_idle_task()
 {
     // 1. 检测到开始按键按下
+    if (key1_count)
+    {
+        global_game.global_phase = PHASE_DEALING;
+        key1_count = 0;
+    }
 
     // 2. 确定庄家
 
     // 3. 进入发牌阶段
-    global_game.global_phase = PHASE_DEALING;
+    // global_game.global_phase = PHASE_DEALING;
 }
 
 /**
@@ -311,6 +316,23 @@ static void phase_dealing_task()
     case DEAL_INIT:
         dealStep++; // 发牌轮数增加
         global_game.dealing_sub_state = DEAL_TRAY_DOWN_B1_START;
+        /*********************** 此处是因为直接跳过AI回合 ************************/
+        if (global_game.current_player == global_game.ai) // 如果当前玩家是AI
+        {
+            set_send_ai_draw_data(&rfid->draw_tile_1); // 设置AI摸牌数据
+            set_send_ai_draw_data(&rfid->draw_tile_2); // 设置AI摸牌数据
+
+            if (dealStep % 2 == 0)       // 硬件限制只能一次发两张
+                switch_to_next_player(); // 切换到下一个玩家
+            if (dealStep >= 24)
+            {
+                global_game.global_phase = PHASE_JUMPING; // 发牌完成，进入跳牌阶段
+                dealStep = 0;                             // 重置发牌轮数
+                last_key1_count = key1_count;             // 重置按键计数
+                last_key2_count = key2_count;             // 重置按键计数
+            }
+            global_game.dealing_sub_state = DEAL_INIT; // 重置发牌状态机
+        }
         break;
 
     // 托盘下降启动
@@ -330,21 +352,25 @@ static void phase_dealing_task()
         motor_conveyor_1_start();
         motor_conveyor_2_start();
         motor_turntable_start();
-        conv1_completed = 0; // 重置传送带1完成标志
-        conv2_completed = 0; // 重置传送带2完成标志
+        conv1_completed = 0;          // 重置传送带1完成标志
+        conv2_completed = 0;          // 重置传送带2完成标志
+        last_key1_count = key1_count; // 更新按键计数
+        last_key2_count = key2_count; // 更新按键计数
         global_game.dealing_sub_state = DEAL_LAYER1_CONV_WAIT_TILE;
         break;
 
     // 等待传送带的牌到达
     case DEAL_LAYER1_CONV_WAIT_TILE:
-        if ((ir_left_count > last_ir_left_count && !conv1_completed) || (last_key1_count != key1_count && !conv1_completed)) // 注入手动挡基因
+        // if ((ir_left_count > last_ir_left_count && !conv1_completed) || (last_key1_count != key1_count && !conv1_completed)) // 注入手动挡基因
+        if (last_key1_count != key1_count && !conv1_completed) // 注入手动挡基因
         {
             motor_conveyor_1_stop();
             last_ir_left_count = ir_left_count; // 更新红外计数
             last_key1_count = key1_count;       // 更新按键计数
             conv1_completed = 1;                // 标记传送带1完成
         }
-        if ((ir_right_count > last_ir_right_count && !conv2_completed) || (last_key2_count != key2_count && !conv2_completed)) // 注入手动挡基因
+        // if ((ir_right_count > last_ir_right_count && !conv2_completed) || (last_key2_count != key2_count && !conv2_completed)) // 注入手动挡基因
+        if (last_key2_count != key2_count && !conv2_completed) // 注入手动挡基因
         {
             motor_conveyor_2_stop();
             last_ir_right_count = ir_right_count; // 更新红外计数
@@ -421,29 +447,33 @@ static void phase_dealing_task()
     case DEAL_TRAY_UP_WAIT_COMPLETE:
         if (MotorIsAtPosition(driver->motor[MOTOR_ELEVATOR], 50))
             global_game.dealing_sub_state = DEAL_WAIT_TILE_CAUGHT;
-        left_drawn = 0;  // 重置左摸牌标志
-        right_drawn = 0; // 重置右摸牌标志
+        left_drawn = 0;               // 重置左摸牌标志
+        right_drawn = 0;              // 重置右摸牌标志
+        last_key1_count = key1_count; // 更新按键计数
+        last_key2_count = key2_count; // 更新按键计数
         break;
 
     // 等待牌被接走
     case DEAL_WAIT_TILE_CAUGHT:
-        if ((last_ir_left_count < ir_left_count && !left_drawn) || (last_key1_count != key1_count && !left_drawn))
+        // if ((last_ir_left_count < ir_left_count && !left_drawn) || (last_key1_count != key1_count && !left_drawn))
+        if (last_key1_count != key1_count && !left_drawn)
         {
-            if (set_send_ai_draw_data(&rfid->draw_tile_1))
-            {
-                left_drawn = 1;                     // 标记左摸牌
-                last_ir_left_count = ir_left_count; // 更新红外计数
-                last_key1_count = key1_count;       // 更新按键计数
-            }
+            // if (set_send_ai_draw_data(&rfid->draw_tile_1))
+            // {
+            left_drawn = 1;                     // 标记左摸牌
+            last_ir_left_count = ir_left_count; // 更新红外计数
+            last_key1_count = key1_count;       // 更新按键计数
+            // }
         }
-        if ((last_ir_right_count < ir_right_count && !right_drawn) || (last_key2_count != key2_count && !right_drawn))
+        // if ((last_ir_right_count < ir_right_count && !right_drawn) || (last_key2_count != key2_count && !right_drawn))
+        if (last_key2_count != key2_count && !right_drawn)
         {
-            if (set_send_ai_draw_data(&rfid->draw_tile_2))
-            {
-                right_drawn = 1;                      // 标记右摸牌
-                last_ir_right_count = ir_right_count; // 更新红外计数
-                last_key2_count = key2_count;         // 更新按键计数
-            }
+            // if (set_send_ai_draw_data(&rfid->draw_tile_2))
+            // {
+            right_drawn = 1;                      // 标记右摸牌
+            last_ir_right_count = ir_right_count; // 更新红外计数
+            last_key2_count = key2_count;         // 更新按键计数
+            // }
         }
 
         if (left_drawn && right_drawn) // 只有当左右摸牌都完成后才能进入下一个状态
@@ -484,6 +514,20 @@ static void phase_jumping_task()
     case JUMP_INIT:
         jumpStep++;
         global_game.jumping_sub_state = JUMP_TRAY_DOWN_B1_START;
+        /*********************** 此处是因为直接跳过AI回合 ************************/
+        if (global_game.current_player == global_game.ai)
+        {
+            set_send_ai_draw_data(&rfid->draw_tile_1);
+            switch_to_next_player();
+            if (jumpStep >= 4)
+            {
+                global_game.global_phase = PHASE_SINGLE_REFILL;
+                jumpStep = 0;
+                last_key1_count = key1_count; // 重置按键计数
+                last_key2_count = key2_count; // 重置按键计数
+            }
+            global_game.jumping_sub_state = JUMP_INIT;
+        }
         break;
 
     // 托盘下降启动
@@ -516,20 +560,24 @@ static void phase_jumping_task()
         }
         motor_turntable_start();
         global_game.jumping_sub_state = JUMP_CONV_WAIT_TILE;
+        last_key1_count = key1_count; // 更新按键计数
+        last_key2_count = key2_count; // 更新按键计数
         break;
 
     // 等待传送带的牌到达
     case JUMP_CONV_WAIT_TILE:
         if (jumpStep == 1) // 庄家跳牌
         {
-            if ((ir_left_count > last_ir_left_count && !conv1_completed) || (last_key1_count != key1_count && !conv1_completed)) // 注入手动挡基因
+            // if ((ir_left_count > last_ir_left_count && !conv1_completed) || (last_key1_count != key1_count && !conv1_completed)) // 注入手动挡基因
+            if (last_key1_count != key1_count && !conv1_completed) // 注入手动挡基因
             {
                 motor_conveyor_1_stop();
                 last_ir_left_count = ir_left_count; // 更新红外计数
                 last_key1_count = key1_count;       // 更新按键计数
                 conv1_completed = 1;                // 标记传送带1完成
             }
-            if ((ir_right_count > last_ir_right_count && !conv2_completed) || (last_key2_count != key2_count && !conv2_completed))
+            // if ((ir_right_count > last_ir_right_count && !conv2_completed) || (last_key2_count != key2_count && !conv2_completed))
+            if (last_key2_count != key2_count && !conv2_completed) // 注入手动挡基因
             {
                 motor_conveyor_2_stop();
                 last_ir_right_count = ir_right_count; // 更新红外计数
@@ -553,7 +601,8 @@ static void phase_jumping_task()
         }
         else // 非庄家跳牌
         {
-            if ((ir_left_count > last_ir_left_count && !conv1_completed) || (last_key1_count != key1_count && !conv1_completed))
+            // if ((ir_left_count > last_ir_left_count && !conv1_completed) || (last_key1_count != key1_count && !conv1_completed))
+            if (last_key1_count != key1_count && !conv1_completed)
             {
                 motor_conveyor_1_stop();
                 last_ir_left_count = ir_left_count; // 更新红外计数
@@ -635,32 +684,36 @@ static void phase_jumping_task()
     case JUMP_TRAY_UP_WAIT_COMPLETE:
         if (MotorIsAtPosition(driver->motor[MOTOR_ELEVATOR], 50))
             global_game.jumping_sub_state = JUMP_WAIT_TILE_CAUGHT;
-        left_drawn = 0;  // 重置左摸牌标志
-        right_drawn = 0; // 重置右摸牌标志
+        left_drawn = 0;               // 重置左摸牌标志
+        right_drawn = 0;              // 重置右摸牌标志
+        last_key1_count = key1_count; // 更新按键计数
+        last_key2_count = key2_count; // 更新按键计数
         break;
 
     // 等待牌被接走
     case JUMP_WAIT_TILE_CAUGHT:
-        if ((ir_left_count > last_ir_left_count && !left_drawn) || (last_key1_count != key1_count && !left_drawn))
+        // if ((ir_left_count > last_ir_left_count && !left_drawn) || (last_key1_count != key1_count && !left_drawn))
+        if (last_key1_count != key1_count && !left_drawn)
         {
-            if (set_send_ai_draw_data(&rfid->draw_tile_1))
-            {
-                left_drawn = 1;                     // 标记左摸牌
-                last_ir_left_count = ir_left_count; // 更新红外计数
-                last_key1_count = key1_count;       // 更新按键计数
-            }
+            // if (set_send_ai_draw_data(&rfid->draw_tile_1))
+            // {
+            left_drawn = 1;                     // 标记左摸牌
+            last_ir_left_count = ir_left_count; // 更新红外计数
+            last_key1_count = key1_count;       // 更新按键计数
+            // }
         }
 
         if (jumpStep == 1) // 庄家跳牌
         {
-            if ((ir_right_count > last_ir_right_count && !right_drawn) || (last_key2_count != key2_count && !right_drawn))
+            // if ((ir_right_count > last_ir_right_count && !right_drawn) || (last_key2_count != key2_count && !right_drawn))
+            if (last_key2_count != key2_count && !right_drawn)
             {
-                if (set_send_ai_draw_data(&rfid->draw_tile_2))
-                {
-                    right_drawn = 1;                      // 标记右摸牌
-                    last_ir_right_count = ir_right_count; // 更新红外计数
-                    last_key2_count = key2_count;         // 更新按键计数
-                }
+                // if (set_send_ai_draw_data(&rfid->draw_tile_2))
+                // {
+                right_drawn = 1;                      // 标记右摸牌
+                last_ir_right_count = ir_right_count; // 更新红外计数
+                last_key2_count = key2_count;         // 更新按键计数
+                // }
             }
         }
         else // 非庄家跳牌
@@ -705,6 +758,24 @@ static void phase_single_refill_task()
     case REFILL_INIT:
         refillStep++; // 单张摸牌步数增加
         global_game.single_refill_sub_state = REFILL_TRAY_DOWN_B1_START;
+        /*********************** 此处是因为直接跳过AI回合 ************************/
+        if (global_game.current_player == global_game.ai)
+        {
+            set_send_ai_draw_data(&rfid->draw_tile_1); // 设置AI摸牌数据
+            if (ai->is_recv)                           // 如果机器人打出牌
+            {
+                ai->is_recv = 0;         // 重置接收标志
+                switch_to_next_player(); // 切换到下一个玩家
+            }
+            if (refillStep >= 55) // 如果单张摸牌步数超过55，则进入结束阶段
+            {
+                global_game.global_phase = PHASE_OVER;
+                refillStep = 0;               // 重置补牌步数
+                last_key1_count = key1_count; // 重置按键计数
+                last_key2_count = key2_count; // 重置按键计数
+            }
+            global_game.single_refill_sub_state = REFILL_INIT; // 重置跳牌状态机
+        }
         break;
 
     // 托盘下降启动
@@ -725,11 +796,13 @@ static void phase_single_refill_task()
         motor_conveyor_2_stop();
         motor_turntable_start();
         global_game.single_refill_sub_state = REFILL_CONV_WAIT_TILE;
+        last_key1_count = key1_count; // 更新按键计数
         break;
 
     // 等待传送带的牌到达
     case REFILL_CONV_WAIT_TILE:
-        if ((ir_left_count > last_ir_left_count) || (last_key1_count != key1_count)) // 注入手动挡基因
+        // if ((ir_left_count > last_ir_left_count) || (last_key1_count != key1_count)) // 注入手动挡基因
+        if (last_key1_count != key1_count) // 注入手动挡基因
         {
             motor_conveyor_1_stop();
             last_ir_left_count = ir_left_count; // 更新红外计数
@@ -805,19 +878,22 @@ static void phase_single_refill_task()
         if (MotorIsAtPosition(driver->motor[MOTOR_ELEVATOR], 50))
         {
             global_game.single_refill_sub_state = REFILL_WAIT_TILE_CAUGHT;
-            left_drawn = 0; // 重置左摸牌标志
+            left_drawn = 0;               // 重置左摸牌标志
+            last_key1_count = key1_count; // 更新按键计数
         }
         break;
 
     // 等待牌被接走
     case REFILL_WAIT_TILE_CAUGHT:
-        if ((ir_left_count > last_ir_left_count && !left_drawn) || (last_key1_count != key1_count && !left_drawn)) // 注入手动挡基因
+        // if ((ir_left_count > last_ir_left_count && !left_drawn) || (last_key1_count != key1_count && !left_drawn)) // 注入手动挡基因
+        if (last_key1_count != key1_count && !left_drawn) // 注入手动挡基因
         {
             left_drawn = 1;
             set_send_ai_draw_data(&rfid->draw_tile_1); // 设置并发送AI的摸牌数据
         }
 
-        if (left_drawn && set_send_ai_discard_data(&rfid->discard_tile)) // 如果有人打出牌
+        // if (left_drawn && set_send_ai_discard_data(&rfid->discard_tile)) // 如果有人打出牌
+        if (left_drawn) // 如果有人打出牌
         {
             switch_to_next_player(); // 切换到下一个玩家
             if (refillStep >= 55)    // 所有牌都被接完引起的牌局自然结束，以108张牌局为例
@@ -974,7 +1050,7 @@ static uint8_t set_send_ai_discard_data(RFIDQueue *queue)
 void motor_conveyor_1_start()
 {
     // 传送带1启动逻辑，目前为空实现
-    at8236->mode_a = AT8236_FORWARD;
+    at8236->mode_a = AT8236_BACKWARD;
 }
 
 /**
@@ -992,7 +1068,7 @@ void motor_conveyor_1_stop()
 void motor_conveyor_2_start()
 {
     // 传送带2启动逻辑，目前为空实现
-    at8236->mode_b = AT8236_FORWARD;
+    at8236->mode_b = AT8236_BACKWARD;
 }
 
 /**
@@ -1098,11 +1174,18 @@ void motor_lid_close()
 
 static void Key1Callback(GPIO_Instance *gpio)
 {
-    key1_count++;
+    static float last_key1_time;
+    if (HAL_GetTick() - last_key1_time < 100) // 防抖动
+        return;
+    else
+    {
+        last_key1_time = HAL_GetTick();
+        key1_count++;
+    }
 
     if (key1_count % 2 == 1)
     {
-        MotorSetRef(motor_push_1, motor_push_1->measure.init_ecd + 1000); // 推牌参数1000 前进为正
+        MotorSetRef(motor_push_1, motor_push_1->measure.init_ecd - 1000); // 推牌参数1000 前进为正
         // MotorSetRef(motor_push_2, motor_push_2->measure.init_ecd - 1000); // 升牌参数1000 向上为负
         // MotorSetRef(motor_elevator, motor_elevator->measure.init_ecd + 1000);
         // MotorSetRef(motor_turntable, motor_turntable->measure.init_ecd + 1000);
@@ -1119,7 +1202,14 @@ static void Key1Callback(GPIO_Instance *gpio)
 
 static void Key2Callback(GPIO_Instance *gpio)
 {
-    key2_count++;
+    static float last_key2_time;
+    if (HAL_GetTick() - last_key2_time < 100) // 防抖动
+        return;
+    else
+    {
+        last_key2_time = HAL_GetTick();
+        key2_count++;
+    }
 
     if (key2_count % 2 == 1)
     {
@@ -1134,10 +1224,24 @@ static void Key2Callback(GPIO_Instance *gpio)
 
 static void Red1Callback(GPIO_Instance *gpio)
 {
-    ir_left_count++;
+    static float red1_last_time;
+    if (HAL_GetTick() - red1_last_time < 1000) // 防抖动
+        return;
+    else
+    {
+        red1_last_time = HAL_GetTick();
+        ir_left_count++;
+    }
 }
 
 static void Red2Callback(GPIO_Instance *gpio)
 {
-    ir_right_count++;
+    static float red2_last_time;
+    if (HAL_GetTick() - red2_last_time < 1000) // 防抖动
+        return;
+    else
+    {
+        red2_last_time = HAL_GetTick();
+        ir_right_count++;
+    }
 }

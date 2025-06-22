@@ -4,25 +4,25 @@
 #include <stdint.h>
 
 #define ELEVATOR_BG_ENCODER 0
-#define ELEVATOR_B1_ENCODER 0
+#define ELEVATOR_B1_ENCODER -1200
 #define ELEVATOR_B2_ENCODER 0
-#define PUSH_1_OUT_ENCODER 0
+#define PUSH_1_OUT_ENCODER -1000
 #define PUSH_1_BACK_ENCODER 0
-#define PUSH_2_OUT_ENCODER 0
+#define PUSH_2_OUT_ENCODER 1000
 #define PUSH_2_BACK_ENCODER 0
 
-#define TURNTABLE_START_PWM 1000  // 转盘启动PWM值
+#define TURNTABLE_START_PWM -1000 // 转盘启动PWM值
 #define TURNTABLE_STOP_PWM 0      // 转盘停止PWM值
-#define CONVEYOR_1_START_PWM 1000 // 传送带1启动PWM值
+#define CONVEYOR_1_START_PWM 8400 // 传送带1启动PWM值
 #define CONVEYOR_1_STOP_PWM 0     // 传送带1停止PWM值
-#define CONVEYOR_2_START_PWM 1000 // 传送带2启动PWM值
+#define CONVEYOR_2_START_PWM 8400 // 传送带2启动PWM值
 #define CONVEYOR_2_STOP_PWM 0     // 传送带2停止PWM值
 
 #define MOTOR_LID_OPEN 0x0A
 #define MOTOR_LID_CLOSE 0x0B
 
-#define L298N_MOTOR_PWM 500  // L298N电机PWM值
-#define AT8236_MOTOR_PWM 500 // AT8236电机PWM值
+#define L298N_MOTOR_PWM 500   // L298N电机PWM值
+#define AT8236_MOTOR_PWM 8400 // AT8236电机PWM值
 
 #define NUM_PLAYERS 4 // 玩家数量
 

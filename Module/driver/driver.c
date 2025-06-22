@@ -227,9 +227,9 @@ void MotorControl(Driver_Instance *driver)
  * @param motor 电机实例
  * @param tolerance 允许的误差范围
  */
-uint8_t MotorIsAtPosition(Motor_Instance *motor, float tolerance)
+uint8_t MotorIsAtPosition(Motor_Instance *motor, int16_t tolerance)
 {
-    if (abs(motor->motor_controller.pid_ref - motor->measure.total_ecd) <= tolerance)
+    if (abs(motor->motor_controller.pid_ref - (float)motor->measure.total_ecd) < tolerance)
         return 1; // 到达指定位置
     else
         return 0; // 未到达指定位置

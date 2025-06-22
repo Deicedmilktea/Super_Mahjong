@@ -21,9 +21,9 @@
 #include "arm_math.h"
 #include <math.h>
 
-#ifndef abs
-#define abs(x) ((x > 0) ? x : -x)
-#endif
+// #ifndef abs
+// #define abs(x) ((x > 0) ? x : -x)
+// #endif
 
 // PID 优化环节使能标志位,通过位与可以判断启用的优化环节;也可以改成位域的形式
 typedef enum
