@@ -11,7 +11,7 @@
 #define PUSH_2_OUT_ENCODER 1000
 #define PUSH_2_BACK_ENCODER 0
 
-#define TURNTABLE_START_PWM -1000 // 转盘启动PWM值
+#define TURNTABLE_START_PWM 1000  // 转盘启动PWM值
 #define TURNTABLE_STOP_PWM 0      // 转盘停止PWM值
 #define CONVEYOR_1_START_PWM 8400 // 传送带1启动PWM值
 #define CONVEYOR_1_STOP_PWM 0     // 传送带1停止PWM值

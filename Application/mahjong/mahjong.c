@@ -323,8 +323,8 @@ static void phase_dealing_task()
             set_send_ai_draw_data(&rfid->draw_tile_1); // 设置AI摸牌数据
             set_send_ai_draw_data(&rfid->draw_tile_2); // 设置AI摸牌数据
 
-            if (dealStep % 2 == 0)       // 硬件限制只能一次发两张
-                switch_to_next_player(); // 切换到下一个玩家
+            // if (dealStep % 2 == 0)       // 硬件限制只能一次发两张
+            switch_to_next_player(); // 切换到下一个玩家
             if (dealStep >= 24)
             {
                 global_game.global_phase = PHASE_JUMPING; // 发牌完成，进入跳牌阶段
@@ -483,8 +483,8 @@ static void phase_dealing_task()
 
         if (left_drawn && right_drawn) // 只有当左右摸牌都完成后才能进入下一个状态
         {
-            if (dealStep % 2 == 0)       // 硬件限制只能一次发两张
-                switch_to_next_player(); // 切换到下一个玩家
+            // if (dealStep % 2 == 0)       // 硬件限制只能一次发两张
+            switch_to_next_player(); // 切换到下一个玩家
             if (dealStep >= 24)
             {
                 global_game.global_phase = PHASE_JUMPING;
@@ -809,8 +809,8 @@ static void phase_single_refill_task()
     // 启动传送带上第一层麻将
     case REFILL_CONV_START:
         motor_conveyor_1_start();
-        // motor_conveyor_2_stop();
-        motor_conveyor_2_reverse();
+        motor_conveyor_2_stop();
+        // motor_conveyor_2_reverse();
         motor_turntable_start();
         global_game.single_refill_sub_state = REFILL_CONV_WAIT_TILE;
         last_key1_count = key1_count; // 更新按键计数
