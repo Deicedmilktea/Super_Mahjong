@@ -44,6 +44,7 @@ static void motor_conveyor_1_start();
 static void motor_conveyor_1_stop();
 static void motor_conveyor_2_start();
 static void motor_conveyor_2_stop();
+static void motor_conveyor_2_reverse();
 static void motor_turntable_start();
 static void motor_turntable_stop();
 static void motor_push_1_out();
@@ -297,6 +298,7 @@ static void phase_idle_task()
     {
         global_game.global_phase = PHASE_DEALING;
         key1_count = 0;
+        dealStep = 20;
     }
 
     // 2. 确定庄家
@@ -807,7 +809,8 @@ static void phase_single_refill_task()
     // 启动传送带上第一层麻将
     case REFILL_CONV_START:
         motor_conveyor_1_start();
-        motor_conveyor_2_stop();
+        // motor_conveyor_2_stop();
+        motor_conveyor_2_reverse();
         motor_turntable_start();
         global_game.single_refill_sub_state = REFILL_CONV_WAIT_TILE;
         last_key1_count = key1_count; // 更新按键计数
@@ -819,6 +822,7 @@ static void phase_single_refill_task()
         if (last_key1_count != key1_count) // 注入手动挡基因
         {
             motor_conveyor_1_stop();
+            motor_conveyor_2_stop();
             last_ir_left_count = ir_left_count; // 更新红外计数
             last_key1_count = key1_count;       // 更新按键计数
 
@@ -1111,6 +1115,15 @@ void motor_conveyor_2_stop()
 }
 
 /**
+ * @brief 传送带2反向
+ */
+void motor_conveyor_2_reverse()
+{
+    // 传送带2反向逻辑，目前为空实现
+    at8236->mode_b = AT8236_FORWARD;
+}
+
+/**
  * @brief 启动转盘电机
  */
 void motor_turntable_start()
@@ -1205,7 +1218,7 @@ void motor_lid_close()
 static void Key1Callback(GPIO_Instance *gpio)
 {
     static float last_key1_time;
-    if (HAL_GetTick() - last_key1_time < 100) // 防抖动
+    if (HAL_GetTick() - last_key1_time < 500) // 防抖动
         return;
     else
     {
@@ -1233,7 +1246,7 @@ static void Key1Callback(GPIO_Instance *gpio)
 static void Key2Callback(GPIO_Instance *gpio)
 {
     static float last_key2_time;
-    if (HAL_GetTick() - last_key2_time < 100) // 防抖动
+    if (HAL_GetTick() - last_key2_time < 500) // 防抖动
         return;
     else
     {

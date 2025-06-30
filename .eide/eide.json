@@ -80,22 +80,7 @@
           "Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F",
           "Drivers/CMSIS/Device/ST/STM32F4xx/Include",
           "Drivers/CMSIS/Include",
-          "Middlewares/ST/ARM/DSP/Inc",
-          "Module/ai",
-          "Module/algorithm",
-          "Module/at8236",
-          "Module/crc",
-          "Module/daemon",
-          "Module/driver",
-          "Module/l298n",
-          "Module/rfid",
-          "Module/ws2812",
-          "Bsp/dwt",
-          "Bsp/gpio",
-          "Bsp/usart",
-          "Application/led",
-          "Application/mahjong",
-          "Application"
+          "Middlewares/ST/ARM/DSP/Inc"
         ],
         "libList": [
           "Middlewares/ST/ARM/DSP/Lib"
