@@ -63,6 +63,10 @@ void Error_Handler(void);
 #define KEY_1_Pin GPIO_PIN_3
 #define KEY_1_GPIO_Port GPIOE
 #define KEY_1_EXTI_IRQn EXTI3_IRQn
+#define SWITCH_L_Pin GPIO_PIN_0
+#define SWITCH_L_GPIO_Port GPIOB
+#define SWITCH_R_Pin GPIO_PIN_2
+#define SWITCH_R_GPIO_Port GPIOB
 #define ELEVA_RED_1_Pin GPIO_PIN_11
 #define ELEVA_RED_1_GPIO_Port GPIOF
 #define ELEVA_RED_1_EXTI_IRQn EXTI15_10_IRQn
